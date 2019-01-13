@@ -230,6 +230,35 @@ Breakout.Levels = [
       "   diId                dgGd   ",
       "    dD                  dD    "
     ]
+  },
+
+  {
+    colors: Breakout.Colors.hf,
+    name: "Omnicoin by Mentoles",
+    bricks: [
+      "       fFfFfFfFfFfFfFfFf      ",
+      "     fFfFfoOoOoOoOoOofFfFf    ",
+      "   fFfFfoOoOoOoOoOoOoOofFfF   ",
+      "  fFfFoOoOocCcCcCcCoOcCofFf   ",
+      " fFfoOoOoOcCcCcCcCcCcCcoOfFf  ",
+      " fFoOoOoOcCoOoOoOoOcCcoOoOfF  ",
+      " fFoOoOocCoOoOoOoOcCcCcoOofF  ",
+      " fFoOoOcCoOoOoOoOcCcocCoOofFf ",
+      "fFfoOocCoOoOoOoOcCcoOcCoOofFf ",
+      "fFfoOocCoOoOoOocCcoOocCoOofFf ",
+      "fFfoOocCoOoOoOcCcoOoOcCoOofFf ",
+      "fFfoOocCoOoOocCcoOoOcCcoOofFf ",
+      "fFfFoOocCoOocCcoOoOcCcoOoOfFf ",
+      " fFfoOocCcCcCcoOoOcCoOoOoOfF  ",
+      " fFfoOoOcCcCcCcCcCcoOoOoOfFf  ",
+      " fFfoOoOocCcCcCcCcoOoOoOfFfF  ",
+      "  fFfoOocCcoOoOoOoOoOoOfFfFf  ",
+      "  fFfFoOcCoOoOoOoOoOoOfFfFf   ",
+      "   fFfFfoOoOoOoOoOoOofFfFf    ",
+      "     fFfFfoOoOoOoOofFfFf      ",
+      "       fFfFfFfFfFfFfFf        ",
+      "          fFfFfFfFf           "
+    ]
   }
 
 ];
