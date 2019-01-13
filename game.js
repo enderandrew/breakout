@@ -320,6 +320,10 @@ Game = {
     return (min + (Math.random() * (max - min)));
   },
 
+  randomInt: function(min, max) {
+    return Math.floor(Math.random() * max) + min;
+  },
+
   randomChoice: function(choices) {
     return choices[Math.round(Game.random(0, choices.length-1))];
   },
@@ -609,7 +613,6 @@ Game = {
 
     resize: function() {
       if ((this.width != this.canvas.offsetWidth) || (this.height != this.front.offsetHeight)) {
-        // console.log("CANVAS RESIZED " + this.front.offsetWidth + ", " + this.front.offsetHeight);
         this.width  = this.front.width  = this.front.offsetWidth;
         this.height = this.front.height = this.front.offsetHeight;
         if (this.game && this.game.onresize)

@@ -36,7 +36,7 @@ Breakout.Levels = [
       "  cm  mc  cccc   cc  cm  mc   ",
       "  cm  mc cm  mc cmmc cm mc    ",
       "  cccCCC cm  mc c    cmmc     ",
-      "  cmMmMc cccCCC c    ccc      ",
+      "  cMMMMc cccCCC c    ccc      ",
       "  cm  mc cmmMMc c    cmmc     ",
       "  cm  mc cm  mc cmmc cm mc    ",
       "  cm  mc cm  mc  cc  cm  mc   ",
@@ -58,7 +58,7 @@ Breakout.Levels = [
 
   {
     colors: Breakout.Colors.hf,
-    name: "Raid boss Omni by xadamxk",
+    name: "Raid Boss Omni by xadamxk",
     bricks: [
       "",
       "        dDdDdDdDdDdDd         ",
@@ -147,7 +147,7 @@ Breakout.Levels = [
 
   {
     colors: Breakout.Colors.hf,
-    name: "Omniscient by Nightmare",
+    name: "90's Omni by Nightmare",
     bricks: [
       "         eEeEeEeEeEeEe        ",
       "         edDdDdDdDdDdeEeE     ",
@@ -171,6 +171,35 @@ Breakout.Levels = [
       "    eEoOoOoOoOoOoeEoOoe       ",
       "    eoOoOoeEeoOeoOoOoOe       ",
       "    eoOeEeEoOoeoOoOoOeE       "
+    ]
+  },
+
+  {
+    colors: Breakout.Colors.hf,
+    name: "Gift Award by Nightmare",
+    bricks: [
+      "                              ",
+      "                              ",
+      "                              ",
+      "                              ",
+      "                              ",
+      "          hHhH   hHh          ",
+      "          heEhH hHeh          ",
+      "          hHhehHeEeh          ",
+      "       iIiIihHheEhHhiI        ",
+      "       iIi   ihHhH iI         ",
+      "        ib iIiIhi  iI         ",
+      "        iI  iIiIi  iI         ",
+      "        iI  iIiIi  iI         ",
+      "        iI  iIiIi  iI         ",
+      "        iI  iIiIi  iI         ",
+      "        iI  iIiIi  iI         ",
+      "        iI  iIiIi  i          ",
+      "        iI  iIiIi             ",
+      "            iIiIi             ",
+      "             iIi              ",
+      "                              ",
+      "                              "
     ]
   },
 
