@@ -1,0 +1,84 @@
+[align=center][size=xx-large][color=#6b6b6b][u][color=#69407f][b]HF Breakout[/b][/color][/u][/color][/size]
+[size=large][color=#6b6b6b]Play, Design, and Share levels[/color][/size]
+
+[size=x-large][url=https://xadamxk.github.io/javascript-breakout/]CLICK HERE TO PLAY THE GAME[/url][/size]
+
+[img]https://github.com/xadamxk/javascript-breakout/blob/master/Promo/levels.gif?raw=true[/img]
+
+[size=x-large][url=https://codepen.io/xadamxk/pen/XoyPbq]CLICK HERE TO CREATE LEVELS[/url][/size]
+[img]https://github.com/xadamxk/javascript-breakout/blob/master/Promo/editor_example.gif?raw=true[/img]
+[hr]
+[/align]
+Submitting a level? Please provide the following:
+[code]
+[b]Level Name: [/b]
+[b]Level Code from generator (put in code tags please): [/b]
+[b]Level Preview Screenshot (via level editor): [/b]
+[/code]
+[hr]
+
+[size=xx-large][color=#69407f][u][color=#6b6b6b][b]The Game[/b][/color][/u][/color][/size]
+
+[size=large][u]Background[/u][/size]
+[sp]
+[list]
+Yesterday, 1/13/2019, I found an existing game (jakesgordon/javascript-breakout) that supported basic levels, a few colors, and score memory. I have added custom levels, level names, changed the theme, implemented a framework for powerups, and a whole lot more. I also wrote a level generator so members can make their own levels and request to add them to the publicly available game.[/list]
+[/sp]
+
+[size=large][u]Powerups[/u][/size]
+[sp]
+I broke the ball physics after trying to implement powerup drops, so for now, powerups apply instantly.
+I plan to implement drops so you can dodge certain powerups, but I can't promise when that will be implemented.
+
+Currently, powerups have a 1 in 40 (2.5%) chance of dropping per block destroyed.
+[list]
+[*][b]Big Paddle[/b]
+[list]
+Makes your paddle 2x longer[/list]
+[*] [b]Small Paddle[/b] [color=red](Disabled)[/color]
+[list]
+Shrinks your paddle in half[/list]
+[*] [b]Extra Life[/b]
+[list]
+Gives you an extra life[/list]
+[*] [b]Multi Ball[/b] [color=#66ccff](Work in Progress)[/color]
+[list]
+Multiplies your ball into 3[/list]
+[*] [b]Fire Ball[/b] [color=#66ccff](Work in Progress)[/color]
+[list]
+Turns the ball into molten lava, melting everything in its path[/list]
+[/list]
+[/sp]
+
+[size=large][u]Plans/ To-Do[/u][/size]
+[sp]
+I plan to add to the game as long as the community enjoys the project.
+With that being said, I am open to suggestions, but below are things planned:
+[list]
+[*][u]More Powerups:[/u] I am working on adding more power ups.
+[*][u]More Levels:[/u]: With the help of the community, I would like to add many more levels.
+[*][u]Users Playing:[/u] A feature that shows how many users are playing the game.
+[*][u]Level Uploader:[/u] A feature that allows you to play levels you create without going through the approval process.
+[*][u]and more![/u]
+[/list]
+[/sp]
+
+[size=xx-large][color=#69407f][u][color=#6b6b6b][b]The Level Editor[/b][/color][/u][/color][/size]
+
+[size=large][u]Plans[/u][/size]
+[sp]
+[list]
+[*][u]Level Upload:[/u] I created this editor so users could make and share games with the rest of the community. Right now, I have to add levels the community submits to be added to the game. But soon, I will implement the ability to upload created levels so you can plan them locally.
+[*][u]Integrated Editor:[/u] I plan to integrate an editor so you can load levels as you are creating them.
+[*][u]More Colors:[/u] There are 6-8 color slots open, so if the community decides on colors they would like to be in the game, I can add them
+[/list]
+[/sp]
+
+[size=large][u]Submissions[/u][/size]
+[sp]
+[list]
+[*][u]Submitting Your Level:[/u] Want your level to be available to the entire community? Use the code at the top of this thread to submit your level. Provide the level name, level code, and level screenshot from the editor.
+[*][u]Submitted Levels:[/u]
+[/list]
+- Not Yet Added-
+[/sp]
