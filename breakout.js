@@ -279,10 +279,10 @@ Breakout = {
       description: "Powerups have a 2.5% droprate when destroying blocks and offer several perks.",
       list: [
         {
-          name: 'BigPaddle',
+          name: 'Big Paddle',
           enabled: true,
           used: false,
-          description: 'Makes your paddle large',
+          description: 'Makes your paddle 2x longer',
           funct: function (paddle, score) {
             var posX = paddle.x - (Breakout.Defaults.paddle.defaultWidth / 2);
             var posY = paddle.y;
@@ -293,10 +293,10 @@ Breakout = {
           }
         },
         {
-          name: 'SmallPaddle',
+          name: 'Small Paddle',
           used: false,
           enabled: false,
-          description: 'Makes your paddle small',
+          description: 'Shrinks your paddle in half',
           funct: function (paddle, score) {
             var posX = paddle.x + (Breakout.Defaults.paddle.defaultWidth / 2);
             var posY = paddle.y;
@@ -306,7 +306,7 @@ Breakout = {
           }
         },
         {
-          name: 'ExtraLife',
+          name: 'Extra Life',
           used: false,
           enabled: true,
           description: 'Gives you an extra life',
