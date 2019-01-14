@@ -68,7 +68,7 @@ Breakout = {
     powerup: {
       droprate: {
         low: 0,
-        high: 24,
+        high: 40,
         goal: 0
       }
     },
@@ -276,7 +276,7 @@ Breakout = {
   Powerups: {
 
     powerups: {
-      description: "Powerups have a 4% droprate when destroying blocks and offer several perks.",
+      description: "Powerups have a 2.5% droprate when destroying blocks and offer several perks.",
       list: [
         {
           name: 'BigPaddle',
