@@ -68,7 +68,7 @@ Breakout = {
     powerup: {
       droprate: {
         low: 0,
-        high: 40,
+        high: 4,
         goal: 0
       }
     },
@@ -208,7 +208,7 @@ Breakout = {
   },
 
   hitBrick: function (brick) {
-    this.powerup.checkForPowerup();
+    this.powerup.rollForPowerup();
     this.playSound('brick');
     this.court.remove(brick);
     this.score.increase(brick.score);
@@ -280,7 +280,7 @@ Breakout = {
       list: [
         {
           name: 'Big Paddle',
-          enabled: true,
+          enabled: false,
           used: false,
           description: 'Makes your paddle 2x longer',
           funct: function (paddle, score) {
@@ -308,10 +308,20 @@ Breakout = {
         {
           name: 'Extra Life',
           used: false,
-          enabled: true,
+          enabled: false,
           description: 'Gives you an extra life',
           funct: function (paddle, score) {
             score.gainLife();
+          }
+        },
+        {
+          name: 'Fireball',
+          used: false,
+          enabled: true,
+          active: false,
+          description: 'Melts everything in it\'s path',
+          funct: function (paddle, score) {
+            this.active = true;
           }
         }
       ]
@@ -325,16 +335,31 @@ Breakout = {
       this.score = score;
     },
 
-    checkForPowerup: function () {
+    isFireballActive: function () {
+      return this.powerups.list.find(powerup => 
+        powerup.name === "Fireball").active;
+    },
+    rollForPowerup: function () {
       if (Math.round(Game.randomInt(Breakout.Defaults.powerup.droprate.low, Breakout.Defaults.powerup.droprate.high)) == 
       Breakout.Defaults.powerup.droprate.goal) this.givePowerup();
     },
     givePowerup: function () {
+      /* Debug whatever is wrong with choosing a powerup that is enabled */
+      
+      
+      
       var powerup = Game.randomChoice(this.powerups.list);
+      console.log(powerup);
       if (powerup.enabled && !powerup.used) {
         document.getElementById('powerups').innerHTML = powerup.name + ": " + powerup.description;
         powerup.funct(this.paddle, this.score);
         powerup.used = true;
+        
+      } else if (powerup.enabled && 
+        this.powerups.list.find(power => !power.used)) {
+        this.givePowerup();
+      } else {
+        console.log("Out of Powerups...");
       }
     },
     resetPowerup: function (powerup) { powerup.used = false; },
@@ -344,6 +369,9 @@ Breakout = {
       Breakout.Defaults.paddle.width = Breakout.Defaults.paddle.defaultWidth;
       this.paddle.reset();
       this.paddle.setpos((this.game.width / 2) - Breakout.Defaults.paddle.width, this.paddle.y);
+      // Reset Fireball
+      this.powerups.list.find(powerup => 
+        powerup.name === "Fireball").active = false;
       // Clear alert
       document.getElementById('powerups').innerHTML = "";
 
@@ -684,12 +712,22 @@ Breakout = {
         switch (closest.point.d) {
           case 'left':
           case 'right':
+          // this.setdir(-p2.dx, p2.dy);
+          if (closest.item.isbrick && this.game.powerup.isFireballActive()){
+            this.setdir(p2.dx, p2.dy);
+          } else {
             this.setdir(-p2.dx, p2.dy);
+          }
             break;
 
           case 'top':
           case 'bottom':
-            this.setdir(p2.dx, -p2.dy);
+            // this.setdir(p2.dx, -p2.dy);
+            if (closest.item.isbrick && this.game.powerup.isFireballActive()){
+              this.setdir(p2.dx, p2.dy);
+            } else {
+              this.setdir(p2.dx, -p2.dy);
+            }
             break;
         }
 
