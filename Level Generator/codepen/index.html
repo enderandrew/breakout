@@ -1,5 +1,7 @@
 #palette
-  each val in ['', '#00B500', '#FF2121', '#4d2f5d', '#333333', '#1F1F1F', '#ffcc00', '#0066ff', '#afaaaa', '#ed1c24', '#00cc66', '#99ccff', '#aa00ff', '#2D7E52', '#9999FF', '#ffcd94']
+  each val, index in ['', '#00B500', '#FF2121', '#4d2f5d', '#333333', '#1F1F1F', '#ffcc00', '#0066ff', '#afaaaa', '#ed1c24', '#00cc66', '#99ccff', '#aa00ff', '#2D7E52', '#9999FF', '#ffcd94']
+    if index % 6 == 0
+      br
     label
       input(type="radio", name="brush", value=val)
 #grid

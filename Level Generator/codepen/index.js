@@ -101,7 +101,7 @@ function convertArrayToPretty(array) {
   return tempString;
 }
 function convertNumberToLetter(number) {
-  switch (number) {
+  switch (number-1) {
     case 0:
       return " ";
       break;
