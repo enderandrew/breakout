@@ -259,6 +259,181 @@ Breakout.Levels = [
       "       fFfFfFfFfFfFfFf        ",
       "          fFfFfFfFf           "
     ]
+  },
+
+  {
+    colors: Breakout.Colors.hf,
+    name: "Stickyman by SoulZeh",
+    bricks: [
+      "                              ",
+      "                              ",
+      "  fFfFfFfFfFfFfFfFfF          ",
+      "  fFfFfFfFfFfFfFfFfFf         ",
+      "  fFfFfFfFfFfFfFfFfFfF        ",
+      "  fFfFfFfFfFfFfFfFfFfFf       ",
+      "  fFfFfFfFfFfFeEeEfFfFfF      ",
+      "  fFfFfFfFfFfFeEeEfFfFfFf     ",
+      "  fFfFfFfFfFfFEeEfFfFfFfFf    ",
+      "  fFfFfFfFfFfFfFfFfFfFfFfFf   ",
+      "  fFfFfFfFfFfFfFfFfF          ",
+      "  fFfFfFfFfFfFfFfFfF          ",
+      "  fFfFfFfFfFfFfFfFfF          ",
+      "  fFfFfFfFfFfFfFfFf           ",
+      "  fFfFfFfFf                   ",
+      "  fFfFfFfFf                   ",
+      "  fFfFfFfFfFfFfFfFfF          ",
+      "  fFfFfFfFfFfFfFfFfF          ",
+      "  fFfFfFfFfFfFfFfFfF          ",
+      "                              ",
+      "                              ",
+      "                              "
+    ]
+  },
+
+  {
+    colors: Breakout.Colors.hf,
+    name: "The Diamond by .Saint",
+    bricks: [
+      "",
+      "        gGgGgGgGgGgGgG        ",
+      "       gkKkKkKkKkKkKkKg       ",
+      "      gGgGgGgGgGgGgGgGgG      ",
+      "     gGkgkgkgkgkgkgkgkgkg     ",
+      "    gkKgkgkgkgkgkgkgkgkgkg    ",
+      "   gGgGgGgGgGgGgGgGgGgGgGgG   ",
+      "   gkKkKkKkKkKgGkKkKkKkKkKg   ",
+      "    gkKkKkKkKkgkKkKkKkKkKg    ",
+      "     gkKkKkKkKkgkKkKkKkKg     ",
+      "      gkKkKkKkgkKkKkKkKg      ",
+      "       gkKkKkKkgkKkKkKg       ",
+      "        gkKkKkgkKkKkKg        ",
+      "         gkKkKkgkKkKg         ",
+      "eEeEeEeEeEgkKkgkKkKgeEeEeEeEeE",
+      " e   l   l gkKkgkKg lLlLl   e ",
+      "  e  l   l  gkgkKg  l      e  ",
+      "   e lLlLl   gGgG   lLl   e   ",
+      "  e  l   l    gG    l      e  ",
+      " e   l   l          l       e ",
+      "eEeEeEeEeEeEeEeEeEeEeEeEeEeEeE",
+      "                              ",
+      "                              "
+    ]
+  },
+
+  {
+    colors: Breakout.Colors.hf,
+    name: "White Hat Helper by Mix3rz",
+    bricks: [
+      "                              ",
+      "                              ",
+      "                              ",
+      "                              ",
+      "nNnNnNnNnNnN      nNnNnNnNnNnN",
+      "nkKkKkKknkKkn    nkKknkKkKkKkn",
+      "NkKkKkKkKnkKkn  nkKknkKkKkKkKn",
+      " nNnNnNnNnkKkn  nkKknNnNnNnNn ",
+      " nkKkKkKkKnkKn  nkKnkKkKkKkKn ",
+      "  nkKkKkKknkKn  nkKnkKkKkKkn  ",
+      "   nNnNnNnNnkn  nknNnNnNnNn   ",
+      "    nkKkKkKnkn  nknkKkKkKn    ",
+      "     nNnNnNnNn  nNnNnNnNn     ",
+      "     nkKkKkKnN  nNkKkKkKn     ",
+      "      nkKkKkKn  nkKkKkKn      ",
+      "       nNnNnN    nNnNnN       ",
+      "                              ",
+      "                              ",
+      "                              ",
+      "                              ",
+      "                              ",
+      "                              "
+    ]
+  },
+
+  {
+    colors: Breakout.Colors.hf,
+    name: "Frog Award by Mix3rz",
+    bricks: [
+      "                              ",
+      "                              ",
+      "                              ",
+      "         dDd      dDd         ",
+      "        dfFfd    dfFfd        ",
+      "       dfddfFdDdDfFddfd       ",
+      "       dfdDfFaAaAfFdDfd       ",
+      "       dfFfFfaAaAfFfFfd       ",
+      "        dfFfaAaAaAfFfd        ",
+      "       daAaAaAaAaAaAaAd       ",
+      "      daAdaAaAaAaAaAdaAd      ",
+      "      daAadDdDdDdDdDaAad      ",
+      "       daAaAaAaAaAaAaAd       ",
+      "        dDdaAaAaAaAdDd        ",
+      "         daAaAaAaAaAd         ",
+      "       dDaAaAamMaAaAadD       ",
+      "      dmdaAaAmMmMaAaAdmd      ",
+      "      dmMmdmdmMmMdmdmMmd      ",
+      "       dDd d dDdD d dDd       ",
+      "                              ",
+      "                              ",
+      "                              "
+    ]
+  },
+
+  {
+    colors: Breakout.Colors.hf,
+    name: "Grammar Nazi Award by SoulZeh",
+    bricks: [
+      "bBbBbBbBbBbBbBbBbBbBbBbBbBbBbB",
+      "bBbBbBbBbBbBbBbBbBbBbBbBbBbBbB",
+      "bB                          bB",
+      "bB             eE           bB",
+      "bB            eEe           bB",
+      "bB           eEe            bB",
+      "bB          eEe             bB",
+      "bB         eEe    Ee        bB",
+      "bB        eEe    EeEe       bB",
+      "bB       eEe    eEEeEe      bB",
+      "bB      eEe    eEe eEeE     bB",
+      "bB     eEe    eEe   eEeE    bB",
+      "bB     eEe    Ee     eEe    bB",
+      "bB     eEeE         eEe     bB",
+      "bB     eEeEe       eEe      bB",
+      "bB      eEeEeE   eEeE       bB",
+      "bB        eEeEeEeEeE        bB",
+      "bB          eEeEeEe         bB",
+      "bB           eEeEe          bB",
+      "bB                          bB",
+      "bBbB                      bBbB",
+      "bBbB                      bBbB"
+    ]
+  },
+
+  {
+    colors: Breakout.Colors.hf,
+    name: "Ace of Spades by Mix3rz",
+    bricks: [
+      "                              ",
+      "  e                           ",
+      " e e         dD               ",
+      " eEe        dDeE              ",
+      " e e       deEeEe             ",
+      "           dEeEeE             ",
+      "          dEeEeEeE            ",
+      "          dEeEeEeE            ",
+      "         dEeEeEeEeE           ",
+      "         dEeEeEeEeE           ",
+      "        dEeEeEeEeEeE          ",
+      "        dEeEeEeEeEeE          ",
+      "       dEeEeEeEeEeEeE         ",
+      "       dEeEeEeEeEeEeE         ",
+      "             eE               ",
+      "            eEeE              ",
+      "           eEeEeE             ",
+      "          eEeEeEeE        e e ",
+      "          eEeEeEeE        eEe ",
+      "                          e e ",
+      "                           e  ",
+      "                              "
+    ]
   }
 
 ];
