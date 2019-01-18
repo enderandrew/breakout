@@ -40,11 +40,13 @@ body {
 
 #levels #next {
   position: absolute;
+  left: 5px;
 }
 
 #levels #prev {
   position: absolute;
   top: 50px;
+  left: 5px;
 }
 
 #levels #labelDiv {
