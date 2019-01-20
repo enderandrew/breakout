@@ -84,7 +84,15 @@ function convertDataArray(dataArray) {
       prevLetter = currentLetter;
     }
   }
-  document.getElementById("levelcode").value = convertArrayToPretty(finalArray);
+  document.getElementById("levelcode").value = convertCodeToOutput(convertArrayToPretty(finalArray));
+}
+function convertCodeToOutput(levelCode) {
+  var colorStr = '"colors": {"a": "#00B500","b": "#FF2121","c": "#4d2f5d","d": "#333333","e": "#1F1F1F","f": "#ffcc00","g": "#0066ff","h": "#afaaaa","i": "#ed1c24","j": "#00cc66","k": "#99ccff","l": "#aa00ff","m": "#2D7E52","n": "#9999FF","o": "#ffcd94"},';
+  var nameStr1 = '"name": "';
+  var nameStr2 = '",';
+  brickStr = '"bricks": [';
+  
+  return btoa("{" + colorStr + nameStr1 + document.getElementById("levelname").value + nameStr2 + brickStr + levelCode + "]}");
 }
 function convertArrayToPretty(array) {
   let tempString = "\"";

@@ -1,14 +1,15 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html>
+
 <head>
   <title>HF Breakout</title>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-  <meta name="viewport" content="width=device-width", initial-scale=1.0, user-scalable="no"/>
-  <link href="breakout.css" media="screen, print" rel="stylesheet" type="text/css" /> 
-  <link rel="fav icon" type="icon" href="images/favicon.ico"/>
-</head> 
- 
-<body> 
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width" , initial-scale=1.0, user-scalable="no" />
+  <link href="breakout.css" media="screen, print" rel="stylesheet" type="text/css" />
+  <link rel="fav icon" type="icon" href="images/favicon.ico" />
+</head>
+
+<body>
 
 
   <div id="breakout">
@@ -18,14 +19,19 @@
       </div>
     </canvas>
     <div id="levels">
-      <img id="next" class="disabled" src="images/up1.svg"   title="next level">
+      <img id="next" class="disabled" src="images/up1.svg" title="next level">
       <img id="prev" class="disabled" src="images/down1.svg" title="previous level">
       <div id=labelDiv><span id="label"></span></div>
       <span id="level"></span>
     </div>
+
     <div id="controls">
       <input id='sound' type='checkbox' />
       <label for='sound'>Sound</label>
+      <div id="uploadDiv">
+        <button id='upload' />
+        <label for='upload'>Upload</label>
+      </div>
       <p id="powerups"></p>
     </div>
     <div id="instructions" style='display:none;'>
@@ -45,10 +51,11 @@
   <script src="breakout.js"></script>
   <script src="levels.js"></script>
   <script>
-  Game.ready(function() {
-    var game = Game.start('canvas', Breakout);
-  });
+    Game.ready(function () {
+      var game = Game.start('canvas', Breakout);
+    });
   </script>
 
-</body> 
+</body>
+
 </html>
