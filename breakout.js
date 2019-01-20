@@ -131,6 +131,8 @@ Breakout = {
     Game.addEvent('instructions', 'touchstart', this.play.bind(this));
     Game.addEvent(this.runner.canvas, 'touchmove', this.ontouchmove.bind(this));
     Game.addEvent(document.body, 'touchmove', function (event) { event.preventDefault(); }); // prevent ipad bouncing up and down when finger scrolled
+
+    Game.addEvent('upload', 'click', this.load.bind(this, true));
   },
 
   toggleSound: function () {
@@ -244,6 +246,49 @@ Breakout = {
   setLevelLabel: function () { let element = document.getElementById('label'); element.innerHTML = this.getLevelName(); },
   getLevelName: function () { return this.Defaults.level.name },
 
+  load: function (obj, fresh) {
+    if (fresh) {
+      let givenLevelCode = prompt("Paste level code:");
+      if (givenLevelCode) {
+        this.readLevel(givenLevelCode);
+        this.setLevel(0);
+      }
+    }
+  },
+
+  readLevel: function (level) {
+    try {
+      var decodedLevel = atob(level).trim();
+      if (this.isValidJson(decodedLevel)) {
+        var levelJson = JSON.parse(decodedLevel);
+        if (this.isValidLevel(levelJson)) {
+          Breakout.Levels.unshift(levelJson);
+        }
+      }
+    } catch {
+      alert("Level code provided could not be");
+    }
+    
+  },
+
+  isValidLevel: function (levelJson) {
+    if (!levelJson.name || !levelJson.bricks) {
+      alert("Level code provided is missing key attribute.");
+      return false;
+    }
+    return true;
+  },
+
+  isValidJson: function (str) {
+    try {
+      JSON.parse(str);
+    } catch (e) {
+      alert("Level code provided could not be parsed.");
+      return false;
+    }
+    return true;
+  },
+
   initCanvas: function (ctx) { // called by Game.Runner whenever the canvas is reset (on init and on resize)
     ctx.fillStyle = this.color.foreground;
     ctx.strokeStyle = this.color.foreground;
@@ -284,7 +329,7 @@ Breakout = {
           enabled: true,
           used: false,
           description: 'Makes your paddle 2x longer',
-          funct: function (paddle, score) {
+          funct: function (paddle, score, ball) {
             var posX = paddle.x - (Breakout.Defaults.paddle.defaultWidth / 2);
             var posY = paddle.y;
             Breakout.Defaults.paddle.width = Breakout.Defaults.paddle.defaultWidth * 2;
@@ -298,7 +343,7 @@ Breakout = {
           used: false,
           enabled: true,
           description: 'Shrinks your paddle in half',
-          funct: function (paddle, score) {
+          funct: function (paddle, score, ball) {
             var posX = paddle.x + (Breakout.Defaults.paddle.defaultWidth / 2);
             var posY = paddle.y;
             Breakout.Defaults.paddle.width = Breakout.Defaults.paddle.defaultWidth / 2;
@@ -311,7 +356,7 @@ Breakout = {
           used: false,
           enabled: true,
           description: 'Gives you an extra life',
-          funct: function (paddle, score) {
+          funct: function (paddle, score, ball) {
             this.active = true;
             score.gainLife();
           }
@@ -322,8 +367,17 @@ Breakout = {
           enabled: true,
           active: false,
           description: 'Melts everything in it\'s path',
-          funct: function (paddle, score) {
+          funct: function (paddle, score, ball) {
             this.active = true;
+          }
+        },
+        {
+          name: 'Tripleball',
+          used: false,
+          enabled: false,
+          active: false,
+          description: 'BALLS!',
+          funct: function (paddle, score, ball) {
           }
         }
       ]
@@ -342,19 +396,17 @@ Breakout = {
         powerup.name === "Fireball").active;
     },
     rollForPowerup: function () {
+      this.powerups.list[4].funct(this.paddle, this.score, this.ball);
       if (Math.round(Game.randomInt(Breakout.Defaults.powerup.droprate.low, Breakout.Defaults.powerup.droprate.high)) ==
         Breakout.Defaults.powerup.droprate.goal) this.givePowerup();
     },
     givePowerup: function () {
-      /* TODO: Debug whatever is wrong with choosing a powerup that is enabled */
       var playablePowerups = this.findPowerup();
-      // if ((this.isEnabledPowerup() && !this.isUsedPowerup()) ||
-      //   (this.isEnabledPowerup() && !this.isActivePowerup())) {
 
       if (playablePowerups.length > 0) {
         var powerup = Game.randomChoice(playablePowerups);
         document.getElementById('powerups').innerHTML = powerup.name + ": " + powerup.description;
-        powerup.funct(this.paddle, this.score);
+        powerup.funct(this.paddle, this.score, this.ball);
         powerup.used = true;
       }
     },
@@ -626,6 +678,12 @@ Breakout = {
       ].concat(this.game.court.bricks);
       if (options && options.launch)
         this.launch();
+    },
+
+    multiply: function () {
+      this.ball = Object.construct(Breakout.Ball, this, cfg.ball);
+      this.clearLaunch();
+      this.launch();
     },
 
     moveToPaddle: function () {
