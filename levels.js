@@ -434,6 +434,34 @@ Breakout.Levels = [
       "                           e  ",
       "                              "
     ]
+  },
+
+  {
+    "colors": Breakout.Colors.hf,
+    "name": "HF Avatar by vyactor",
+    "bricks": [
+      "                              ",
+      "                              ",
+      "   hHhHhHhHhHhHhHhHhHhHh      ",
+      "   h                   h      ",
+      "   h              c    h      ",
+      "   h   cC cCc  cCcjc   h      ",
+      "   h  cjJcCjc cjJjJc   h      ",
+      "   h  cjJcjJcCjJjJjc   h      ",
+      "   h   cjcjJcCjJjcCc   h      ",
+      "   h   cjcjJcCjJjJjc   h      ",
+      "   h   cjcCjcCjJjJjc   h      ",
+      "   h   cjJjJcCjJcCc    h      ",
+      "   h   cjcCjJcjc       h      ",
+      "   h   cjcCjJcjc    jJjJj     ",
+      "   h  cjJc cjcjc  jJj   j     ",
+      "   h  cCcC  cCcC jJ     j     ",
+      "   h             j      j     ",
+      "   h             j      j     ",
+      "   h             j      j     ",
+      "   hHhHhHhHhHhHhHjJjJjJjJ     ",
+      "                              ",
+      "                              "]
   }
 
 ];

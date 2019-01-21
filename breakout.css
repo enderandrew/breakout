@@ -57,6 +57,12 @@ body {
   color: #94c6ff;
 }
 
+#onlineText {
+  float: right;
+  margin-right: 20px;
+  font-size: 18px;
+}
+
 #levels #label {
   width: 100%;
   text-align: center;
