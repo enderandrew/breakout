@@ -7,14 +7,18 @@ Starting as a basic tutorial for programming games, [https://github.com/jakesgor
 
 ## Level Generator
 
-A few motivating and useful examples of how your product can be used. Spice this up with code blocks and potentially more screenshots.
+![](https://github.com/xadamxk/hf-breakout/blob/master/Promo/editor_demo.gif?raw=true)
 
-_For more examples and usage, please refer to the [Wiki][wiki]._
+
+[Click here to access the editor](https://codepen.io/xadamxk/pen/XoyPbq)
+
+The level generator allows anyone to draw pixel art to create custom breakout levels. The code for this editor was inspired by [gelstudios/gitfiti](https://github.com/gelstudios/gitfiti), which allows users to create pixel art in their Github contribution history. To create levels, simply open the codepen project and get to drawing. When you are happy with your creation, don't forget to name your level, copy the contents of the Code and head on over to the breakout game. Click upload, paste the level code in the prompt window, and enjoy playing your leve.
+
+To add your level to the publicly available game, please submit levels via the release thread, Github issue/pull request, or contact me privately.
+
 
 ## Powerups
 `Powers have a 1 in 40 (2.5%) drop rate upon destroying blocks`
-
-![](https://github.com/xadamxk/hf-breakout/blob/master/Promo/editor_demo.gif?raw=true)
 
 * Big Paddle
     * Makes your paddle 2x longer
@@ -58,25 +62,10 @@ _For more examples and usage, please refer to the [Wiki][wiki]._
 
 ## Meta
 
-Your Name – [@YourTwitter](https://twitter.com/dbader_org) – YourEmail@example.com
+This project wouldn't be possible without the following people:
 
-Distributed under the XYZ license. See ``LICENSE`` for more information.
+[Gel Studios](https://github.com/gelstudios): [Gitfiti Project](https://github.com/gelstudios/gitfiti)
 
-[https://github.com/yourname/github-link](https://github.com/dbader/)
+[Jake Gordon](https://github.com/jakesgordon): [Breakout Project](https://github.com/jakesgordon/javascript-breakout)
 
-
-
-
-Breakout
-========
-
-Another HTML5 experiment to implement BREAKOUT in a `<canvas>`
-
- * You can find the [game here](http://codeincomplete.com/posts/2011/6/11/javascript_breakout/demo.html)
- * You can find out [how it works](http://codeincomplete.com/posts/2011/6/11/javascript_breakout/index.html)
-   * [Managing Game State](http://codeincomplete.com/posts/2011/6/12/game_state_in_breakout/)
-   * [Rendering Performance](http://codeincomplete.com/posts/2011/6/12/rendering_breakout/)
-   * [Collision Detection](http://codeincomplete.com/posts/2011/6/12/collision_detection_in_breakout/)
-   * [Gameplay Balance](http://codeincomplete.com/posts/2011/6/13/gameplay_in_breakout/)
-   * [Adding Sound](http://codeincomplete.com/posts/2011/6/16/adding_sound_to_breakout/)
-   * [Touch Events](http://codeincomplete.com/posts/2011/6/24/adding_touch_to_breakout/)
+The HF community for submitting levels, bug reports, and general game suggestions.
