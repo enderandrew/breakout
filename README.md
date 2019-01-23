@@ -1,6 +1,8 @@
 # HF Breakout
 > Play, Design, and Share Breakout Levels
 
+[Click Here to Play](https://xadamxk.github.io/hf-breakout/)
+
 Starting as a basic tutorial for programming games, [Jake Gordon](https://github.com/jakesgordon) created this game to teach about game physics and utilizing HTML5 canvas to build fun and creative games. I've built on his work by adding a custom level generator, game powerups, additional levels, level names, online user counter, and more.
 
 ![](https://github.com/xadamxk/hf-breakout/blob/master/Promo/levels.gif?raw=true)
