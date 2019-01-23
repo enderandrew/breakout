@@ -25,15 +25,17 @@ To add your level to the publicly available game, please submit levels via the r
 * Big Paddle
     * Makes your paddle 2x longer
 * Small Paddle
-    * CHANGE: Shrinks your paddle in half
+    * Shrinks your paddle in half
 * Extra Life
-    * `You probably guessed it...` Gives an extra life
+    * `You probably guessed it.` Gives an extra life
 * Fireball
     * Turns the ball into molten lava, melting every brick in its path
 * Multiball `(Work in Progress)`
     * Multiplies your ball into 3 smaller balls
 * Sticky Paddle `(Work in Progress)`
     * Catches the ball on each paddle hit
+    
+It was my intention to have powerups drop from blocks when destroyed, but after attempting this I broke the game physics. I've reverted this feature but do plan on implementing it in the future.
 
 ## Release History
 * 0.3.1 - 1/21/2019
