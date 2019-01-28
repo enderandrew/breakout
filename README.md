@@ -1,21 +1,26 @@
 # HF Breakout
 > Play, Design, and Share Breakout Levels
 
-[Click Here to Play](https://xadamxk.github.io/hf-breakout/)
+<p align='center'>
+  <a href="https://xadamxk.github.io/hf-breakout/">Click Here to Play</a>
+</p>
 
 Starting as a basic tutorial for programming games, [Jake Gordon](https://github.com/jakesgordon) created this game to teach about game physics and utilizing HTML5 canvas to build fun and creative games. I've built on his work by adding a custom level generator, game powerups, additional levels, level names, online user counter, and more.
 
-![](https://github.com/xadamxk/hf-breakout/blob/master/Promo/levels.gif?raw=true)
+<p align='center'>
+  <img src='https://github.com/xadamxk/hf-breakout/blob/master/Promo/levels.gif?raw=true' alt='HF Breakout'></img>
+</p>
 
 ## Level Generator
 
-<details> 
+<p align='center'>
+  <a href"https://codepen.io/xadamxk/pen/XoyPbq">Click here to access the editor</a>
+  
+  <details> 
   <summary>Screenshot</summary>
-![](https://github.com/xadamxk/hf-breakout/blob/master/Promo/editor_demo.gif?raw=true)
+  <img src='https://github.com/xadamxk/hf-breakout/blob/master/Promo/editor_demo.gif?raw=true' alt='Level Generator'></img>
 </details>
-
-
-[Click here to access the editor](https://codepen.io/xadamxk/pen/XoyPbq)
+</p>
 
 The level generator allows anyone to draw pixel art to create custom breakout levels. The code for this editor was inspired by [gelstudios/gitfiti](https://github.com/gelstudios/gitfiti), which allows users to create pixel art in their Github contribution history. To create levels, simply open the codepen project and get to drawing. When you are happy with your creation, don't forget to name your level, copy the contents of the Code and head on over to the breakout game. Click upload, paste the level code in the prompt window, and enjoy playing your level.
 
