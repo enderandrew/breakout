@@ -14,7 +14,7 @@ Starting as a basic tutorial for programming games, [Jake Gordon](https://github
 ## Level Generator
 
 <p align='center'>
-  <a href"https://codepen.io/xadamxk/pen/XoyPbq">Click here to access the editor</a>
+  <a href="https://codepen.io/xadamxk/pen/XoyPbq">Click here to access the editor</a>
   
   <details> 
   <summary>Screenshot</summary>
