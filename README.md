@@ -9,7 +9,10 @@ Starting as a basic tutorial for programming games, [Jake Gordon](https://github
 
 ## Level Generator
 
+<details> 
+  <summary>Screenshot</summary>
 ![](https://github.com/xadamxk/hf-breakout/blob/master/Promo/editor_demo.gif?raw=true)
+</details>
 
 
 [Click here to access the editor](https://codepen.io/xadamxk/pen/XoyPbq)
