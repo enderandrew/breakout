@@ -30,7 +30,9 @@ Breakout = {
 
     ball: {
       radius: 0.3,
+	  defaultRadius: 0.3,
       speed: 15,
+	  defaultSpeed: 15,
       labels: {
         3: { text: 'ready...', fill: '#FF2121', stroke: 'black', font: 'bold 28pt arial' },
         2: { text: 'set..', fill: 'white', stroke: 'black', font: 'bold 28pt arial' },
@@ -114,6 +116,7 @@ Breakout = {
       this.ball,
       this.paddle,
       this.score,
+	  this.game,
       cfg.powerups);
     Game.loadSounds({ sounds: cfg.sounds });
   },
@@ -227,6 +230,7 @@ Breakout = {
     this.court.reset(level);
     this.storage.level = this.level = level;
     this.determineLevelName();
+	console.log(this.getLevelName());
     this.powerup.resetPowerups();
     this.refreshDOM();
   },
@@ -326,8 +330,8 @@ Breakout = {
       list: [
         {
           name: 'Big Paddle',
-          enabled: true,
           used: false,
+          enabled: true,
           description: 'Makes your paddle 2x longer',
           funct: function (paddle, score, ball) {
             var posX = paddle.x - (Breakout.Defaults.paddle.defaultWidth / 2);
@@ -335,7 +339,6 @@ Breakout = {
             Breakout.Defaults.paddle.width = Breakout.Defaults.paddle.defaultWidth * 2;
             paddle.reset();
             paddle.setpos(posX, posY);
-
           }
         },
         {
@@ -377,8 +380,47 @@ Breakout = {
           enabled: false,
           active: false,
           description: 'BALLS!',
-          funct: function (paddle, score, ball) {
+          funct: function (paddle, score, ball, cfg) {
+            // not working
+			ball.multiply(cfg);		
           }
+        },
+        {
+          name: 'BigBall',
+          used: false,
+          enabled: true,
+          active: false,
+          description: 'You have REALLY big balls!',
+          funct: function (paddle, score, ball) {
+			ball.grow();
+          }
+        },
+        {
+          name: 'SmallBall',
+          used: false,
+          enabled: true,
+          active: false,
+          description: 'Did you take steroids? You have small balls.',
+          funct: function (paddle, score, ball) {
+			ball.shrink();          }
+        },
+        {
+          name: 'FastBall',
+          used: false,
+          enabled: true,
+          active: false,
+          description: 'Go Speed Racer!',
+          funct: function (paddle, score, ball) {
+			ball.fast();          }
+        },
+        {
+          name: 'SlowBall',
+          used: false,
+          enabled: true,
+          active: false,
+          description: 'That is a little easier!',
+          funct: function (paddle, score, ball) {
+			ball.slow();          }
         }
       ]
     },
@@ -396,7 +438,7 @@ Breakout = {
         powerup.name === "Fireball").active;
     },
     rollForPowerup: function () {
-      this.powerups.list[4].funct(this.paddle, this.score, this.ball);
+      this.powerups.list[4].funct(this.paddle, this.score, this.ball, this.cfg);
       if (Math.round(Game.randomInt(Breakout.Defaults.powerup.droprate.low, Breakout.Defaults.powerup.droprate.high)) ==
         Breakout.Defaults.powerup.droprate.goal) this.givePowerup();
     },
@@ -679,9 +721,30 @@ Breakout = {
       if (options && options.launch)
         this.launch();
     },
+	
+    resize: function () {
+      this.radius = this.cfg.radius * this.game.court.chunk;
+      this.speed = this.cfg.speed * this.game.court.chunk;
+    },
+	
+    grow: function () {
+      this.radius = Breakout.Defaults.ball.defaultRadius * 2 * this.game.court.chunk;
+    },
 
-    multiply: function () {
-      this.ball = Object.construct(Breakout.Ball, this, cfg.ball);
+    shrink: function () {
+      this.radius = Breakout.Defaults.ball.defaultRadius / 2 * this.game.court.chunk;
+    },
+
+    fast: function () {
+      this.speed = Breakout.Defaults.ball.defaultSpeed * 1.5 * this.game.court.chunk;
+    },
+
+    slow: function () {
+      this.speed = Breakout.Defaults.ball.defaultSpeed / 1.5 * this.game.court.chunk;
+    },
+
+    multiply: function (cfg) {
+	  this.ball = Object.construct(Breakout.Ball, this, cfg.ball);
       this.clearLaunch();
       this.launch();
     },
@@ -933,4 +996,3 @@ Breakout = {
   //=============================================================================
 
 }; // Breakout
-

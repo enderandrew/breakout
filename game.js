@@ -54,7 +54,6 @@ if (!Object.extend) {
   };
 }
 
-/* NOT READY FOR PRIME TIME
 if (!window.requestAnimationFrame) {// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
   window.requestAnimationFrame = window.webkitRequestAnimationFrame || 
                                  window.mozRequestAnimationFrame    || 
@@ -64,7 +63,7 @@ if (!window.requestAnimationFrame) {// http://paulirish.com/2011/requestanimatio
                                    window.setTimeout(callback, 1000 / 60);
                                  }
 }
-*/
+
 
 //=============================================================================
 // Minimal DOM Library ($)

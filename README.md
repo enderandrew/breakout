@@ -1,8 +1,8 @@
-# HF Breakout
+# Breakout
 > Play, Design, and Share Breakout Levels
 
 <p align='center'>
-  <a href="https://xadamxk.github.io/hf-breakout/">Click Here to Play</a>
+  <a href="https://enderandrew.com/breakout/">Click Here to Play</a>
 </p>
 
 Starting as a basic tutorial for programming games, [Jake Gordon](https://github.com/jakesgordon) created this game to teach about game physics and utilizing HTML5 canvas to build fun and creative games. I've built on his work by adding a custom level generator, game powerups, additional levels, level names, online user counter, and more.
@@ -14,7 +14,7 @@ Starting as a basic tutorial for programming games, [Jake Gordon](https://github
 ## Level Generator
 
 <p align='center'>
-  <a href="https://codepen.io/xadamxk/pen/XoyPbq">Click here to access the editor</a>
+  <a href="https://enderandrew.com/breakout/level-editor/">Click here to access the editor</a>
   
   <details> 
   <summary>Screenshot</summary>
@@ -38,10 +38,22 @@ To add your level to the publicly available game, please submit levels via the r
     * `You probably guessed it.` Gives an extra life
 * Fireball
     * Turns the ball into molten lava, melting every brick in its path
+* Big Ball
+    * Makes your ball 2x bigger
+* Small Ball
+    * Shrinks your ball in half
+* Fast Ball
+    * Your ball moves faster
+* Slow Ball
+    * Your ball moves slower
 * Multiball `(Work in Progress)`
     * Multiplies your ball into 3 smaller balls
 * Sticky Paddle `(Work in Progress)`
     * Catches the ball on each paddle hit
+* Confused `(Work in Progress)`
+    * Directions temporarily reversed
+* Chaos `(Work in Progress)`
+
     
 It was my intention to have powerups drop from blocks when destroyed, but after attempting this I broke the game physics. I've reverted this feature but do plan on implementing it in the future.
 

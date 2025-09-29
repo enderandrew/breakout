@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>Breakout Level Generator</title>
+  <link rel="stylesheet" href="./style.css">
+
+</head>
+<body style="margin:0 auto;">
+<!-- partial:index.partial.html -->
+<div style="width:800px; margin:0 auto;">
+	<label>
+	<p>Level Name: </p>
+	<input type="text" id="levelname"/>
+	</label>
+	<div id="palette"><br/>
+	<label>
+		<input type="radio" name="brush" value=""/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#00B500"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#FF2121"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#4d2f5d"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#333333"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#1F1F1F"/>
+	</label><br/>
+	<label>
+		<input type="radio" name="brush" value="#ffcc00"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#0066ff"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#afaaaa"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#ed1c24"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#00cc66"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#99ccff"/>
+	</label><br/>
+	<label>
+		<input type="radio" name="brush" value="#aa00ff"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#2D7E52"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#9999FF"/>
+	</label>
+	<label>
+		<input type="radio" name="brush" value="#ffcd94"/>
+	</label>
+	</div>
+	<div id="grid">
+	<ul>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+		<li>
+		<ul>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+			<li class="pixel"></li>
+		</ul>
+		</li>
+	</ul>
+	</div>
+	<label>
+	<p>Code:</p>
+	<textarea id="levelcode"></textarea>
+	</label>
+	<!-- partial -->
+	<script  src="./script.js"></script>
+<div>
+</body>
+</html>
