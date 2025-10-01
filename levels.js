@@ -14,7 +14,7 @@ Breakout.Colors = {
     h: "#afaAaA", // R00t gray
     i: "#ed1c24", // Sociopaths red
     j: "#00cC66", // Divined greEn
-    k: "#99cCfF", // StafF blue
+    k: "#99cCfF", // Staff blue
     l: "#aA00fF", // Bots purple
     m: "#2D7E52", // Vender greEn
     n: "#9999FF", // Admin purple
@@ -25,7 +25,7 @@ Breakout.Colors = {
     w: "#FCFCFC", // white
     o: "#FC7460", // orange
     l: "#3CBCFC", // light blue
-    g: "#80D010", // greEn
+    g: "#80D010", // green
     r: "#D82800", // red
     b: "#0070EC", // blue
     p: "#FC74B4", // pink
@@ -38,7 +38,7 @@ Breakout.Colors = {
     y: "#FFF7A5", // yelLow
     p: "#FFA5E0", // pink
     b: "#A5B3FF", // blue
-    g: "#BFFFA5", // greEn
+    g: "#BFFFA5", // green
     o: "#FFCBA5"  // orange
   },
 
@@ -700,6 +700,57 @@ Breakout.Levels = [
  
   {
     colors: Breakout.Colors.hf,
+    name: "Galaga by xadamxk",
+    bricks: [
+      "     jJj    jJj    jJj        ",
+      "    jJfjJ  jJfjJ  jJfjJ       ",
+      "    jfFfj  jfFfj  jfFfj       ",
+      "    j   j  j   j  j   j       ",
+      "                              ",
+      "   b  b  b  b  b  b  b  b     ",
+      "   bnNb  bnNb  bnNb  bnNb     ",
+      "    nN    nN    nN    nN      ",
+      "   bnNb  bnNb  bnNb  bnNb     ",
+      "   b  b  b  b  b  b  b  b     ",
+      "",
+      "             jJ               ",
+      "            jfFj              ",
+      "            jfFj              ",
+      "    ik      j  j      ki      ",
+      "  ifFfk     j  j     kfFfi    ",
+      "  kfFfFk   g    g   kfFfFk    ",
+      "   kfFf     gGgG     fFfk     ",
+      "    kf    g      g    fk      ",
+      "           g    g             ",
+      "         g  gGgG  g           ",
+      "          g      g            ",
+      "           gGgGgG             "
+    ]
+  },
+  
+  { colors: Breakout.Colors.hf,
+	name: "AOL by EnderAndrew",
+    bricks: [
+      "                              ",
+      "                              ",
+      "       gGg                    ",
+      "      gfFfg                   ",
+      "      gfFfg                   ",
+      "      gfFfg                   ",
+      "      gGgGg                   ",
+      "     gfFfFgGg                 ",
+      "     gfFfFfFg  gG   gG  g     ",
+      "    gfFfgfFfg g  g g  g g     ",
+      "    gfFfFgGg  g  g g  g g     ",
+      "   gfFfFfFg   g  g g  g g     ",
+      "  gfFfgGfFg   gGgG g  g g     ",
+      "  gfFg  gfFg  g  g g  g g     ",
+      "   gG    gG   g  g  gG  gGgG  ",
+    ]
+  },
+
+  {
+    colors: Breakout.Colors.hf,
     name: "Frog Award by Mix3rz",
     bricks: [
       "                              ",
@@ -786,358 +837,9 @@ Breakout.Levels = [
       "       cdcCcdgcCcdDcCde      ",
     ]
   },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "Hack Forums by xadamxk",
-    bricks: [
-      "                              ",
-      "                              ",
-      "  cm  mc  cCcC   cC  cm  mc   ",
-      "  cm  mc cm  mc cmMc cm mc    ",
-      "  cCcCCC cm  mc c    cmMc     ",
-      "  cMMMMc cCcCCC c    cCc      ",
-      "  cm  mc cmMMMc c    cmMc     ",
-      "  cm  mc cm  mc cmMc cm mc    ",
-      "  cm  mc cm  mc  cC  cm  mc   ",
-      "                              ",
-      "                              ",
-      " cCCC  cC  cCc c c  c c   cCc ",
-      " c    c  c c c c c c c c c    ",
-      " CCC  c  c cC  c c c c c  cC  ",
-      " c    c  c c c c c c c c    c ",
-      " c    c  c c c c c c c c c  c ",
-      " c     CC  c c cCc c c c  cC  ",
-      " MMMMmMmMMMMMmMmMMMMMmMmMMMMM ",
-      "                              ",
-      "                              ",
-      "                              ",
-      "                              "
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "Raid Boss Omni by xadamxk",
-    bricks: [
-      "",
-      "        dDdDdDdDdDdDd         ",
-      "        oOoOOOOOOoOoO         ",
-      "        ohHHHhoHhHhHo         ",
-      "        HhHhHhHHhHhHH         ",
-      "        HhHhHhHHhHhHH         ",
-      "        ohHHHhohHHHho         ",
-      "        oOoOOOoOoeoOo         ",
-      "        oOoOeEeEEEoOo         ",
-      "         dDdOOoOodDd          ",
-      "     dDDDDdDoOoOOdDdDDDdD     ",
-      "     dDdDDDDDdDdDDDDDdDdD     ",
-      "     DDdDdDDDDDdDdDDDDDdD     ",
-      "     OOOOdDdDDDdDdDDDoOoO     ",
-      "     OOOODDdDdDDDdDDDoOoO     ",
-      "      oOoOOOOoOoOOOOeoOo      ",
-      "      oOoOOOoOoOOOOeoOoO      ",
-      "      oOoOOODDDDdDeOOoOo      ",
-      "       OOOdDdDDDDDdDoOoO       ",
-      "       DDDDdDdDDDDDdDdD       ",
-      "       DDdDdDDDDDdDdDDD       ",
-      "       DDDDdDdDDDDDdDdD       ",
-      "       DDdDdDDDDDdDdDDD       ",
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "Hacker Man by James!",
-    bricks: [
-      "nNnNnNnNnNnNeEeEeEnNnNnNnNnNnN",
-      "nNnNnNnNnNeEdDdDdDeEnNnNnNnNnN",
-      "nNnNnNnNnedDdDdDdDdDenNnNnNnNn",
-      "NnNnNnNnedDdDdDdDdDdDenNnNnNnN",
-      "nNnNnNnNedDdeEeEeEdDdenNnNnNnN",
-      "nNnNnNnNeEeEfFfFfFeEeEnNnNnNnN",
-      "nNnNnNnNeoOoOoOofFfFfenNnNnNnN",
-      "nNnNnNnNeoOoOoOoOofFfenNnNnNnN",
-      "nNnNnNnNneoOoOoOoOofenNnNnNnNn",
-      "NnNnNnNnNeoOoOoOoOofenNnNnNnNn",
-      "NnNnNnNneEoOoOoOoOofeEnNnNnNnN",
-      "nNnNnNnNeheoOoOoOfFehenNnNnNnN",
-      "nNnNnNnNeEheEoOofeEheEnNnNnNnN",
-      "nNnNnNnedDeEheEeEeEedDenNnNnNn",
-      "NnNnNnedDdDeEhHhHeEdDdDenNnNnN",
-      "nNnNnedDdDdDdehHedDdDdDdenNnNn",
-      "NnNnNedDdDdDdDeEdDdDdDdDenNnNn",
-      "NnNnedDdDdDdDdDdDdDdDdDdDenNnN",
-      "nNnNedDdDdDdDdDdDdDdDdDdDenNnN",
-      "nNnNedDdDdDdDdDdDdDdDdDdDenNnN",
-      "nNnNeEeEeEeEeEeEeEeEeEeEeEnNnN",
-      "                              "
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "90's Omni by Nightmare",
-    bricks: [
-      "         eEeEeEeEeEeEe        ",
-      "         edDdDdDdDdDdeEeE     ",
-      "         edDoOodDoOdDdDe      ",
-      "       eEedoOoOoOoOoOode      ",
-      "       eEhHhHhHhohHhHhHeE     ",
-      "        edfFfFfhHhfFfFdhe     ",
-      "        ehHfFfFhHhfFfFhHe     ",
-      "       eEohHhHhHohHhHhHoe     ",
-      "       eoOoOoeEeEeoOoOoeE     ",
-      "       eoOoOeEeEeEeoOoOe      ",
-      "       eoOoOeoOoeEeoOoOe      ",
-      "       eEeEmeEeEeEeoOoe       ",
-      "        emeEeEeEeEmMeEeE      ",
-      "       eEmMmemMmMmMmemMe      ",
-      "      eEmMmeEmnNmMmeEmMeE     ",
-      "      emMmMemnNnNnmemMmMe     ",
-      "     eEmMmMemneEeEmemMmMe     ",
-      "     emMmMeEeEeEeEemMmMeE     ",
-      "     eoOmMeoOoOoOoemMmeE      ",
-      "    eEoOoOoOoOoOoeEoOoe       ",
-      "    eoOoOoeEeoOeoOoOoOe       ",
-      "    eoOeEeEoOoeoOoOoOeE       "
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "Gift Award by Nightmare",
-    bricks: [
-      "                              ",
-      "                              ",
-      "                              ",
-      "                              ",
-      "                              ",
-      "          hHhH   hHh          ",
-      "          heEhH hHeh          ",
-      "          hHhehHeEeh          ",
-      "       iIiIihHheEhHhiI        ",
-      "       iIi   ihHhH iI         ",
-      "        ib iIiIhi  iI         ",
-      "        iI  iIiIi  iI         ",
-      "        iI  iIiIi  iI         ",
-      "        iI  iIiIi  iI         ",
-      "        iI  iIiIi  iI         ",
-      "        iI  iIiIi  iI         ",
-      "        iI  iIiIi  i          ",
-      "        iI  iIiIi             ",
-      "            iIiIi             ",
-      "             iIi              ",
-      "                              ",
-      "                              "
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "Xerotic Bot DNA by Xerotic",
-    bricks: [
-      "",
-      "     dD                 dD    ",
-      "    dgGdDdDdDdDdDdDdDdDdbBd   ",
-      "   dgGgdhHhHhHhHhHhHhHhHdiId  ",
-      "   dgGgdhHhHhHhHhHhHhHhHdiId  ",
-      "   dgGgGdDdDdDdDdDdDdDdDiIid  ",
-      "   dgGgGd             iIiIid  ",
-      "   dgGgGgdDdDdDdDdDdDiIiIiId  ",
-      "   dgGgGgGgGdhHhHhHhHdiIiIid  ",
-      "    dgGgGgGgGdDdhHhHhdiIiId   ",
-      "     dgGgGgGgGgGdDdDdiIiId    ",
-      "      dDgGgGgGgGgGgGgdDdD     ",
-      "     dDidDdDdgGgGgGgGgGdD     ",
-      "    diIiIiIdhdDgGgGgGgGgGd    ",
-      "   diIiIiIbdDdDdDdgGgGgGgGd   ",
-      "  diIiIbBbB       dgGgGgGgGd  ",
-      "  diIiIdDdDdDdDdDdDdDdgGgGgd  ",
-      "  diIidhHhHhHhHhHhHhHhHgGgGd  ",
-      "  diIidhHhHhHhHhHhHhHhHgGgGd  ",
-      "  diIiIdDdDdDdDdDdDdDdDdgGgd  ",
-      "   diId                dgGd   ",
-      "    dD                  dD    "
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "Omnicoin by Mentoles",
-    bricks: [
-      "       fFfFfFfFfFfFfFfFf      ",
-      "     fFfFfoOoOoOoOoOofFfFf    ",
-      "   fFfFfoOoOoOoOoOoOoOofFfF   ",
-      "  fFfFoOoOocCcCcCcCoOcCofFf   ",
-      " fFfoOoOoOcCcCcCcCcCcCcoOfFf  ",
-      " fFoOoOoOcCoOoOoOoOcCcoOoOfF  ",
-      " fFoOoOocCoOoOoOoOcCcCcoOofF  ",
-      " fFoOoOcCoOoOoOoOcCcocCoOofFf ",
-      "fFfoOocCoOoOoOoOcCcoOcCoOofFf ",
-      "fFfoOocCoOoOoOocCcoOocCoOofFf ",
-      "fFfoOocCoOoOoOcCcoOoOcCoOofFf ",
-      "fFfoOocCoOoOocCcoOoOcCcoOofFf ",
-      "fFfFoOocCoOocCcoOoOcCcoOoOfFf ",
-      " fFfoOocCcCcCcoOoOcCoOoOoOfF  ",
-      " fFfoOoOcCcCcCcCcCcoOoOoOfFf  ",
-      " fFfoOoOocCcCcCcCcoOoOoOfFfF  ",
-      "  fFfoOocCcoOoOoOoOoOoOfFfFf  ",
-      "  fFfFoOcCoOoOoOoOoOoOfFfFf   ",
-      "   fFfFfoOoOoOoOoOoOofFfFf    ",
-      "     fFfFfoOoOoOoOofFfFf      ",
-      "       fFfFfFfFfFfFfFf        ",
-      "          fFfFfFfFf           "
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "Stickyman by SoulZeh",
-    bricks: [
-      "                              ",
-      "                              ",
-      "  fFfFfFfFfFfFfFfFfF          ",
-      "  fFfFfFfFfFfFfFfFfFf         ",
-      "  fFfFfFfFfFfFfFfFfFfF        ",
-      "  fFfFfFfFfFfFfFfFfFfFf       ",
-      "  fFfFfFfFfFfFeEeEfFfFfF      ",
-      "  fFfFfFfFfFfFeEeEfFfFfFf     ",
-      "  fFfFfFfFfFfFEeEfFfFfFfFf    ",
-      "  fFfFfFfFfFfFfFfFfFfFfFfFf   ",
-      "  fFfFfFfFfFfFfFfFfF          ",
-      "  fFfFfFfFfFfFfFfFfF          ",
-      "  fFfFfFfFfFfFfFfFfF          ",
-      "  fFfFfFfFfFfFfFfFf           ",
-      "  fFfFfFfFf                   ",
-      "  fFfFfFfFf                   ",
-      "  fFfFfFfFfFfFfFfFfF          ",
-      "  fFfFfFfFfFfFfFfFfF          ",
-      "  fFfFfFfFfFfFfFfFfF          ",
-      "                              ",
-      "                              ",
-      "                              "
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "The Diamond by .Saint",
-    bricks: [
-      "",
-      "        gGgGgGgGgGgGgG        ",
-      "       gkKkKkKkKkKkKkKg       ",
-      "      gGgGgGgGgGgGgGgGgG      ",
-      "     gGkgkgkgkgkgkgkgkgkg     ",
-      "    gkKgkgkgkgkgkgkgkgkgkg    ",
-      "   gGgGgGgGgGgGgGgGgGgGgGgG   ",
-      "   gkKkKkKkKkKgGkKkKkKkKkKg   ",
-      "    gkKkKkKkKkgkKkKkKkKkKg    ",
-      "     gkKkKkKkKkgkKkKkKkKg     ",
-      "      gkKkKkKkgkKkKkKkKg      ",
-      "       gkKkKkKkgkKkKkKg       ",
-      "        gkKkKkgkKkKkKg        ",
-      "         gkKkKkgkKkKg         ",
-      "eEeEeEeEeEgkKkgkKkKgeEeEeEeEeE",
-      " e   l   l gkKkgkKg lLlLl   e ",
-      "  e  l   l  gkgkKg  l      e  ",
-      "   e lLlLl   gGgG   lLl   e   ",
-      "  e  l   l    gG    l      e  ",
-      " e   l   l          l       e ",
-      "eEeEeEeEeEeEeEeEeEeEeEeEeEeEeE",
-      "                              ",
-      "                              "
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "White Hat Helper by Mix3rz",
-    bricks: [
-      "                              ",
-      "                              ",
-      "                              ",
-      "                              ",
-      "nNnNnNnNnNnN      nNnNnNnNnNnN",
-      "nkKkKkKknkKkn    nkKknkKkKkKkn",
-      "NkKkKkKkKnkKkn  nkKknkKkKkKkKn",
-      " nNnNnNnNnkKkn  nkKknNnNnNnNn ",
-      " nkKkKkKkKnkKn  nkKnkKkKkKkKn ",
-      "  nkKkKkKknkKn  nkKnkKkKkKkn  ",
-      "   nNnNnNnNnkn  nknNnNnNnNn   ",
-      "    nkKkKkKnkn  nknkKkKkKn    ",
-      "     nNnNnNnNn  nNnNnNnNn     ",
-      "     nkKkKkKnN  nNkKkKkKn     ",
-      "      nkKkKkKn  nkKkKkKn      ",
-      "       nNnNnN    nNnNnN       ",
-      "                              ",
-      "                              ",
-      "                              ",
-      "                              ",
-      "                              ",
-      "                              "
-    ]
-  },
-
-  {
-    colors: Breakout.Colors.hf,
-    name: "GramMar Nazi Award by SoulZeh",
-    bricks: [
-      "bBbBbBbBbBbBbBbBbBbBbBbBbBbBbB",
-      "bBbBbBbBbBbBbBbBbBbBbBbBbBbBbB",
-      "bB                          bB",
-      "bB             eE           bB",
-      "bB            eEe           bB",
-      "bB           eEe            bB",
-      "bB          eEe             bB",
-      "bB         eEe    Ee        bB",
-      "bB        eEe    EeEe       bB",
-      "bB       eEe    eEEeEe      bB",
-      "bB      eEe    eEe eEeE     bB",
-      "bB     eEe    eEe   eEeE    bB",
-      "bB     eEe    Ee     eEe    bB",
-      "bB     eEeE         eEe     bB",
-      "bB     eEeEe       eEe      bB",
-      "bB      eEeEeE   eEeE       bB",
-      "bB        eEeEeEeEeE        bB",
-      "bB          eEeEeEe         bB",
-      "bB           eEeEe          bB",
-      "bB                          bB",
-      "bBbB                      bBbB",
-      "bBbB                      bBbB"
-    ]
-  },
-
-  {
-    "colors": Breakout.Colors.hf,
-    "name": "HF Avatar by vyactor",
-    "bricks": [
-      "                              ",
-      "                              ",
-      "   hHhHhHhHhHhHhHhHhHhHh      ",
-      "   h                   h      ",
-      "   h              c    h      ",
-      "   h   cC cCc  cCcjc   h      ",
-      "   h  cjJcCjc cjJjJc   h      ",
-      "   h  cjJcjJcCjJjJjc   h      ",
-      "   h   cjcjJcCjJjcCc   h      ",
-      "   h   cjcjJcCjJjJjc   h      ",
-      "   h   cjcCjcCjJjJjc   h      ",
-      "   h   cjJjJcCjJcCc    h      ",
-      "   h   cjcCjJcjc       h      ",
-      "   h   cjcCjJcjc    jJjJj     ",
-      "   h  cjJc cjcjc  jJj   j     ",
-      "   h  cCcC  cCcC jJ     j     ",
-      "   h             j      j     ",
-      "   h             j      j     ",
-      "   h             j      j     ",
-      "   hHhHhHhHhHhHhHjJjJjJjJ     ",
-      "                              ",
-      "                              "
-	  ]
-  },
   
   { colors: Breakout.Colors.pastel,
+    name: "Six Pack",
     bricks: [
       "", "",
       "  yyYYyyYYyyYY  YYyyYYyyYYyy  ",
@@ -1158,7 +860,8 @@ Breakout.Levels = [
   },
 
   { colors: Breakout.Colors.vintage,
-    bricks: [
+    name: "Louvre Inverted Pyramid",
+	bricks: [
       "", "", "",
       "   AAaaAAaaAAaaAAaaAAaaAAaa   ",
       "    BBbbBBbbBBbbBBbbBBbbBB    ",
@@ -1176,7 +879,8 @@ Breakout.Levels = [
   },
 
   { colors: Breakout.Colors.vintage,
-    bricks: [
+    name: "Love Triangles",
+	bricks: [
       "", "",
       "  aabbccddeeffggFFEEDDCCBBAA  ",
       "   aabbccddeeffFFEEDDCCBBAA   ",
@@ -1187,7 +891,7 @@ Breakout.Levels = [
       "        aabbccddCCBBAA        ",
       "         aabbccCCBBAA         ",
       "          aabbccBBAA          ",
-      "      hh   aabbCCAA   hh      ",
+      "      hh   aabbBBAA   hh      ",
       "     hhHH   aabbAA   hhHH     ",
       "    hhiiHH   aaAA   hhiiHH    ",
       "   hhiiIIHH   aa   hhiiIIHH   ",
@@ -1197,25 +901,26 @@ Breakout.Levels = [
   },
 
   { colors: Breakout.Colors.pastel,
-    bricks: [
+    name: "You've Got Mail",
+	bricks: [
       "                              ",
       "                              ",
       "  bbBBbbBBbbBBbbBBbbBBbbBBbb  ",
-      "  ooggGGggGGggGGggGGggGGggoo  ",
-      "  ooggGGggGGggGGggGGggGGggoo  ",
-      "  ooppPPppPPppPPppPPppPPppoo  ",
-      "  ooppPPppPPppBBppPPppPPppoo  ",
-      "  ooppPPppPPbbBBbbPPppPPppoo  ",
-      "  ooppPPppBBbbOObbBBppPPppoo  ",
-      "  ooppPPbbBBooOOooBBbbPPppoo  ",
-      "  ooppBBbbOOooYYooOObbBBppoo  ",
-      "  oobbBBOOooyyYYyyooOOBBbboo  ",
-      "  oobbooOOYYyyYYyyYYOOoobboo  ",
-      "  ooOOooyyYYyyYYyyYYyyooOOoo  ",
-      "  ooOOYYyyYYyyYYyyYYyyYYOOoo  ",
-      "  ooyyYYyyYYyyYYyyYYyyYYyyoo  ",
-      "  ooyyYYyyYYyyYYyyYYyyYYyyoo  ",
-      "  bbBBbbBBbbBBbbBBbbBBbbBBbb  "
+	  "  ooyyYYyyYYyyYYyyYYyyYYyyoo  ",
+	  "  ooyyYYyyYYyyYYyyYYyyYYyyoo  ",
+	  "  ooOOYYyyYYyyYYyyYYyyYYOOoo  ",
+	  "  ooOOooyyYYyyYYyyYYyyooOOoo  ",
+	  "  oobbooOOYYyyYYyyYYOOoobboo  ",
+	  "  oobbBBOOooyyYYyyooOOBBbboo  ",
+	  "  ooppBBbbOOooYYooOObbBBppoo  ",
+	  "  ooppPPbbBBooOOooBBbbPPppoo  ",
+	  "  ooppPPppBBbbOObbBBppPPppoo  ",
+	  "  ooppPPppPPbbBBbbPPppPPppoo  ",
+	  "  ooppPPppPPppBBppPPppPPppoo  ",
+	  "  ooppPPppPPppPPppPPppPPppoo  ",
+	  "  ooggGGggGGggGGggGGggGGggoo  ",
+	  "  ooggGGggGGggGGggGGggGGggoo  ",
+	  "  bbBBbbBBbbBBbbBBbbBBbbBBbb  ",
     ]
   },
 
