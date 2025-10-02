@@ -258,114 +258,6 @@ var Breakout = {
       this.storage.sound = this.sound = true;
     }
     this.court = Object.construct(Breakout.Court, this, cfg.court);
-    //=============================================================================
-    // Background (parallax synthwave sky + stars + horizon grid)
-    //=============================================================================
-    Breakout.BG = {
-      initialize: function (game) {
-        this.game = game;
-        this.t = 0;
-        this.layers = [];
-      },
-      init: function () {
-        this.resize(this.game.width, this.game.height);
-      },
-      resize: function (w, h) {
-        this.w = w;
-        this.h = h;
-        var mkStars = (count, parallax, seed) => {
-          var s = [];
-          var r = seed >>> 0;
-          for (var i = 0; i < count; i++) {
-            r = (1664525 * r + 1013904223) >>> 0;
-            var x = (r % this.w);
-            r = (1664525 * r + 1013904223) >>> 0;
-            var y = (r % this.h);
-            s.push({
-              x: x,
-              y: y,
-              p: parallax,
-              a: 0.35 + 0.35 * Math.random(),
-              tw: Math.random() * 6.28
-            });
-          }
-          return s;
-        };
-        this.layers = [{
-            type: 'gradient'
-          },
-          {
-            type: 'stars',
-            stars: mkStars(70, 0.15, 7)
-          },
-          {
-            type: 'stars',
-            stars: mkStars(40, 0.35, 11)
-          },
-          {
-            type: 'horizon'
-          }
-        ];
-      },
-      update: function (dt) {
-        this.t += dt;
-      },
-      draw: function (ctx) {
-        ctx.save();
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
-        var g = ctx.createLinearGradient(0, 0, 0, this.h);
-        var pulse = 0.02 * Math.sin(this.t * 1.3);
-        g.addColorStop(0, '#2a1f72');
-        g.addColorStop(0.4, '#624ea2');
-        g.addColorStop(0.7, 'rgba(' + ((220 + 20 * pulse) | 0) + ',' + ((160 + 10 * pulse) | 0) + ',' + ((190 + 10 * pulse) | 0) + ',1)');
-        g.addColorStop(1, '#1a1422');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, this.w, this.h);
-        for (var i = 0; i < this.layers.length; i++) {
-          var L = this.layers[i];
-          if (L.type !== 'stars') continue;
-          for (var s = 0; s < L.stars.length; s++) {
-            var st = L.stars[s];
-            var tw = 0.5 + 0.5 * Math.sin(this.t * 2.0 + st.tw);
-            var y = st.y + 2 * Math.sin(this.t * (0.6 + st.p));
-            ctx.globalAlpha = st.a * tw * 0.8;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(st.x, y, 1, 1);
-          }
-        }
-        ctx.globalAlpha = 0.15;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        
-// --- perspective grid (clean) ---
-(function drawPerspectiveGrid(ctx, w, h) {
-  const horizon = Math.floor(h * 0.58) + 0.5;
-  const alpha   = 0.14;
-  const stepX   = Math.max(28, Math.floor(w / 26));
-  const stepY   = Math.max(18, Math.floor(h / 40));
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth   = 1;
-  for (let y = horizon + stepY; y <= h; y += stepY) {
-    const yy = Math.floor(y) + 0.5;
-    ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(w, yy); ctx.stroke();
-  }
-  const cx = w * 0.5;
-  for (let x = -w; x <= 2*w; x += stepX) {
-    const xx = Math.floor(x % stepX) + 0.5;
-    ctx.beginPath(); ctx.moveTo(xx, horizon);
-    const targetX = cx + (xx - cx) * 1.15;
-    ctx.lineTo(targetX, h + 0.5); ctx.stroke();
-  }
-  ctx.restore();
-})(ctx, this.w, this.h);
-
-        ctx.restore();
-      }
-    };
-    this.court = Object.construct(Breakout.Court, this, cfg.court);
     this.paddle = Object.construct(Breakout.Paddle, this, cfg.paddle);
     this.ball = Object.construct(Breakout.Ball, this, cfg.ball);
     this.score = Object.construct(Breakout.Score, this, cfg.score);
@@ -373,6 +265,7 @@ var Breakout = {
     this.particles = Object.construct(Breakout.Particles, this, {});
     this.bg = Object.construct(Breakout.BG, this, {});
     this.bg.init();
+    if (this.setBeatClock) this.setBeatClock({ t:0, last:0, interval:0.5 }); // optional beat clock the BG can read
     this.lasers = [];
     this.laserCooldown = 0;
     Game.loadSounds({
@@ -968,9 +861,9 @@ var Breakout = {
   addEvents: function () {
     Game.addEvent('prev', 'click', this.prevLevel.bind(this, false));
     Game.addEvent('next', 'click', this.nextLevel.bind(this, false));
-    Game.addEvent('sound', 'change', this.toggleSound.bind(this, false));
-    Game.addEvent('instructions', 'touchstart', this.play.bind(this));
+    // Click/tap the instructions to start:
     Game.addEvent('instructions', 'click', this.play.bind(this));
+    Game.addEvent('instructions', 'touchstart', this.play.bind(this));
     Game.addEvent(this.runner.canvas, 'touchstart', this.ontouchstart.bind(this));
     Game.addEvent(this.runner.canvas, 'touchmove', this.ontouchmove.bind(this));
     Game.addEvent(this.runner.canvas, 'touchend', this.ontouchend.bind(this));
@@ -979,7 +872,12 @@ var Breakout = {
       event.preventDefault();
     });
     Game.addEvent('upload', 'click', this.load.bind(this, true));
-    Game.addEvent(document, 'keydown', (e) => { if (!this.is || !this.is('menu')) return; if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); this.play(); }});
+
+    // Keyboard start only when in menu:
+    Game.addEvent(document, 'keydown', (e) => {
+      if (!this.is || !this.is('menu')) return;
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); this.play(); }
+    });
   },
   toggleSound: function () {
     this.storage.sound = this.sound = !this.sound;
@@ -1075,7 +973,7 @@ var Breakout = {
   },
   draw: function (ctx) {
     ctx.clearRect(0, 0, this.width, this.height);
-    if (this.bg) this.bg.draw(ctx);
+    if (this.bg) this.bg.draw(ctx); // background behind the court
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
     ctx.save();
@@ -3060,6 +2958,98 @@ var Breakout = {
     }
   }
 };
+
+// === Parallax Background (synthwave sky + sun + twinkling stars + horizon grid)
+Breakout.BG = {
+  initialize: function (game) {
+    this.game = game;
+    this.t = 0;
+    this.w = game.width;
+    this.h = game.height;
+    this.stars = [];
+    this.sun = { x: 0.36, y: 0.28, r: 0.12 }; // relative coords
+    this.makeStars();
+  },
+  init: function () { this.resize(this.game.width, this.game.height); },
+
+  setBeatClock: function (beat) { this.beat = beat || null; },
+  onBeat: function () { this.pulse = 1; },
+
+  resize: function (w, h) {
+    this.w = w; this.h = h;
+    if (!this.stars || !this.stars.length) this.makeStars();
+  },
+
+  makeStars: function () {
+    var n1 = 70, n2 = 40, s = [];
+    function prng(seed){ let r=seed>>>0; return ()=> (r=(1664525*r+1013904223)>>>0); }
+    var r1 = prng(7), r2 = prng(11);
+    for (var i=0;i<n1;i++) s.push({x:(r1() % 1920), y:(r1() % 1080), a:0.45, tw: (r1()%628)/100, p:0.15});
+    for (var j=0;j<n2;j++) s.push({x:(r2() % 1920), y:(r2() % 1080), a:0.80, tw: (r2()%628)/100, p:0.35});
+    this.stars = s;
+  },
+
+  update: function (dt) {
+    this.t += dt;
+    if (this.pulse) this.pulse = Math.max(0, this.pulse - dt*2.2);
+  },
+
+  draw: function (ctx) {
+    // 1) sky gradient with gentle beat pulse
+    var p = 0.02 * (this.pulse || Math.sin(this.t * 1.2));
+    var g = ctx.createLinearGradient(0,0,0,this.h);
+    g.addColorStop(0.00, '#251a6b');
+    g.addColorStop(0.40, '#5d49a0');
+    g.addColorStop(0.72, 'rgba(' + ((220+18*p)|0) + ',' + ((160+10*p)|0) + ',' + ((190+12*p)|0) + ',1)');
+    g.addColorStop(1.00, '#171223');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,this.w,this.h);
+
+    // 2) sun (radial gradient disc)
+    var sx = this.w * this.sun.x, sy = this.h * this.sun.y, sr = Math.min(this.w,this.h)*this.sun.r;
+    var sunG = ctx.createRadialGradient(sx, sy, Math.max(2, sr*0.08), sx, sy, sr);
+    sunG.addColorStop(0, 'rgba(255,239,170,0.95)');
+    sunG.addColorStop(1, 'rgba(255,239,170,0.0)');
+    ctx.globalAlpha = 0.9; ctx.fillStyle = sunG;
+    ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2,false); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // 3) stars (twinkle & slight parallax drift)
+    ctx.save();
+    ctx.fillStyle = '#fff';
+    for (var i=0; i<this.stars.length; i++) {
+      var st = this.stars[i];
+      var tw = 0.5 + 0.5*Math.sin(this.t*2.0 + st.tw);
+      var y = (st.y % this.h) + 2*Math.sin(this.t*(0.6+st.p));
+      var x = (st.x % this.w);
+      ctx.globalAlpha = (st.a * tw) * 0.85;
+      ctx.fillRect(Math.floor(x)+0.5, Math.floor(y)+0.5, 1, 1);
+    }
+    ctx.restore();
+
+    // 4) horizon grid (half-pixel aligned; verticals span full width)
+    var baseY = this.h * 0.75;
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 1;
+
+    // horizontals
+    for (var j=0; j<12; j++) {
+      var yy = Math.floor(baseY + j*(j+3)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(0.5, yy); ctx.lineTo(this.w-0.5, yy); ctx.stroke();
+    }
+    // verticals converging to center
+    var cx = this.w * 0.5;
+    for (var k=-10; k<=10; k++) {
+      var x = cx + k * (k*6 + 24);
+      var x0 = Math.floor(x) + 0.5;
+      ctx.beginPath(); ctx.moveTo(x0, baseY + 0.5); ctx.lineTo(Math.floor(cx)+0.5, this.h-0.5); ctx.stroke();
+    }
+    ctx.restore();
+  }
+};
+
 Breakout.Backgrounds = {
   init: function () {
     this.layers = [];
