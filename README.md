@@ -121,23 +121,22 @@ To add your level to the publicly available game, please submit levels via the r
 
 ## Presentation
 * New responsive display resizes the whole game based on display / screen size!
-* Animated parallax backgrounds in 5 times (synthwave, city, space, forest, circuit) that match the beat of the music
+* Animated parallax backgrounds in 5 themes (synthwave, city, space, forest, circuit) that match the beat of the music
 * Fun easter eggs in the themes. Can you find Bigfoot?
 * Achievements! Can you unlock them all? One may require you to cheat.
 * 5 royalty free but awesome songs for the 5 themes
-* Lots more sound effects
 * Added help menu
 * Bezels for bricks and walls
 * Optimzied shaders for bricks, ball and paddle
 * Shiny chrome ball
 * Sexy new paddle with shadow
 * Better looking round pick-ups with glow effects. Good ones glow green and bad ones glow red.
-* New sound effects. A bit memey.
+* Tons more sound effects. A bit memey.
 * Particle effect system
 * New HUD area on the right that shows active effects
 * Ball and paddle change color depending on effects in play.
 * Fast, chaos, lightning, fire and power smash balls have a visual trail.
-* Level Complete and Game Over overlays that display at relevant times.
+* Level Complete and Game Over overlays that display at relevant times. Two meme overlays on special levels.
 * Ripples and thuds - trying to make it feel satisfying to break bricks
 * Floating score numbers
 * Directional debris
