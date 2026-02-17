@@ -4,13 +4,31 @@
 
 /*******************************/
 
+.orbitron-<uniquifier> {
+  font-family: "Orbitron", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: <weight>;
+  font-style: normal;
+}
+
+.mr-dafoe-regular {
+  font-family: "Mr Dafoe", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
 body {
-  font: 12pt Arial, Helvetica, sans-serif;
+  font: 12pt "Orbitron", sans-serif;
   padding: 0;
   margin: 0;
-  /* background: #0e0e0e; */
   background-image: url("./images/mosaic_purple.png");
   background-repeat: repeat;
+  /* Center the game container on screen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden; /* Prevent scrolling when game fits screen */
 }
 
 /**************************/
@@ -21,134 +39,196 @@ body {
 
 #breakout {
   position: relative;
+  
+  /* FIX: Dynamic 4:3 Aspect Ratio Sizing */
+  /* 1. Set the aspect ratio */
+  aspect-ratio: 4 / 3;
+
+  /* 2. Calculate max width: 
+        Either 95% of viewport width 
+        OR 95% of viewport height converted to 4:3 width (95vh * 4/3 ≈ 126.67vh) */
+  width: min(95vw, 126.67vh);
+  
+  /* 3. Calculate max height:
+        Either 95% of viewport height
+        OR 95% of viewport width converted to 3:4 height (95vw * 3/4 = 71.25vw) */
+  height: min(95vh, 71.25vw);
+
+  margin: 0 auto;
+  border: 2px solid #444;
+  background-color: #000;
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
 }
 
 #canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
   -webkit-transform: translateZ(0);
-  background-color: black;
   /* force hardware acceleration in chrome */
 }
 
 #levels {
   position: absolute;
-  left: 10px;
-  top: 10px;
-  color: #949494;
-  line-height: 20px;
+  left: 0;
+  top: 0;
   width: 100%;
+  height: 100%;
+  pointer-events: none; /* Let clicks pass through to the game */
+  z-index: 10;
 }
 
-#levels #next {
+/* Position the buttons in the top-left corner */
+#levels #next, #levels #prev {
+  pointer-events: auto; /* Re-enable clicks for buttons */
+  cursor: pointer;
   position: absolute;
-  left: 5px;
+  left: 1%;
+  width: 5vmin; 
+  height: 5vmin;
+  opacity: 0.8;
+  transition: opacity 0.2s;
 }
 
-#levels #prev {
+#levels #next { top: 1vmin; }   /* Top button */
+#levels #prev { top: 8vmin; }  /* Bottom button (Moved down to make room) */
+
+#levels #next:hover, #levels #prev:hover { opacity: 1; }
+
+/* The Level Number Text */
+#levels #level {
+  display: flex;       /* Reveal the element */
+  align-items: center;
+  justify-content: center;
   position: absolute;
-  top: 50px;
-  left: 5px;
+  left: 1%;
+  top: 7vmin;          /* Position exactly between 1vmin and 13vmin */
+  width: 5vmin;        /* Match button width */
+  height: 5vmin;
+  
+  font-family: "Orbitron", sans-serif;
+  font-weight: bold;
+  font-size: 2.5vmin;
+  color: #FFD700;      /* Gold color to stand out */
+  text-shadow: 2px 2px 0px #000;
+  pointer-events: none;
 }
 
+/* Turn the Level Title into a centered Overlay */
 #levels #labelDiv {
-  width: 100%;
+  font-family: "Mr Dafoe", cursive;
+  position: absolute;
+  top: 35%; 
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  background-color: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 1vmin 3vmin;
   text-align: center;
-  display: block;
-  font-size: 22pt;
+  font-weight: bold;
+  font-size: 4vmin;
   color: #94c6ff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  transition: opacity 0.5s ease;
+  opacity: 1;
+}
+
+#onlineText {
+  display: block; /* Force online count to its own line */
+  font-size: 2vmin;
+  color: #aaa;
+  margin-top: 0.2em;
+  font-weight: normal;
+}
+
+#levels #label {
+  display: inline-block;
+}
+
+#levels #level {
+  display: none; 
 }
 
 #onlineText {
   float: right;
-  margin-right: 20px;
-  font-size: 18px;
+  margin-right: 1%;
+  font-size: 2vmin;
 }
 
 #levels #label {
-  width: 100%;
-  text-align: center;
-  margin-left: 30px;
+  display: inline-block;
+  padding-bottom: 0.5em;
 }
 
 #levels #level {
-  font-size: 14pt;
-  display: block;
-  padding-top: 10px;
-  padding-left: 12px;
-  font-weight: bold;
-  color: #EFD279;
-  text-align: left;
-}
-
-#levels img {
-  cursor: pointer;
-}
-
-#levels img.disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-#levels img:active {
-  margin-top: 1px;
-  margin-left: 1px;
-}
-
-#levels img.disabled:active {
-  margin-top: 0;
-  margin-left: 0;
-}
-
-#controls {
-  width: 100%;
-}
-
-#powerups {
-  font-size: 18pt;
-  text-align: center;
-  color: #ff9894;
+  display: none; /* Hide raw number, rely on visual label */
 }
 
 #instructions {
-  background: #DDD;
-  border: 2px solid #333;
-  color: #555;
-  padding: 0.5em 1em;
-  white-space: nowrap;
+  position: absolute;
+  /* Center instructions over the game */
+  left: 0;
+  right: 0;
+  top: 55%; 
+  transform: translateY(-50%);
+  
+  color: #eee;
+  background-color: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  
+  padding: 1.5em;
   text-align: center;
-  width: 18em;
+  width: 60%;
   margin: 0 auto;
-  position: relative;
-  top: -16em;
+  
+  /* FIX: Dynamic font sizes */
+  font-size: 2.2vmin;
+  line-height: 1.6em;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 #instructions b {
-  color: black;
+  color: #ffeb3b; /* bright yellow for keys */
+  font-weight: bold;
 }
 
-#instructions .keyboard {
-  display: block;
+#instructions a {
+  color: #4fc3f7;
+  text-decoration: none;
+  border-bottom: 1px dotted #4fc3f7;
 }
 
-#instructions .touch {
-  display: none;
-}
-
-#instructions.touch .keyboard {
-  display: none;
-}
-
-#instructions.touch .touch {
-  display: block;
-}
+/* Toggle visibility based on device input type handled by JS class */
+#instructions .keyboard { display: block; }
+#instructions .touch { display: none; }
+#instructions.touch .keyboard { display: none; }
+#instructions.touch .touch { display: block; }
 
 #controls {
   position: absolute;
-  bottom: 0.5em;
-  left: 0.5em;
+  bottom: 1%;
+  left: 1%;
+  font-size: 2vmin;
+  color: #888;
+  pointer-events: auto;
 }
 
 #controls input, #controls label {
   vertical-align: middle;
+  cursor: pointer;
+}
+
+#powerups {
+  margin: 0;
+  padding-top: 0.5em;
+  font-size: 2.2vmin;
+  color: #e0e0e0;
+  text-shadow: 1px 1px 0 #000;
+  font-weight: bold;
 }
 
 /********************************/
@@ -157,53 +237,9 @@ body {
 
 /********************************/
 
-.unsupported {
-  border: 1px solid yellow;
-  color: black;
-  background-color: #FFFFAD;
-  padding: 2em;
-  margin: 5em;
-  display: inline-block;
+.disabled {
+  opacity: 0.3;
+  cursor: default !important;
 }
 
-/*****************************/
-
-/* @media query based layout */
-
-/*****************************/
-
-@media screen and (min-width: 0px) {
-  #breakout     { display: block; width: 90%; height: 480px; margin: 1em auto; border: 1px solid #AAA; }
-  #canvas       { display: block; width: 90%; height: 480px; }
-  #instructions {
-    font-size: 8pt;
-  }
-}
-
-@media screen and (min-width: 1200px) {
-  #breakout {
-    width: 800px;
-    height: 600px;
-  }
-  #canvas {
-    width: 800px;
-    height: 600px;
-  }
-  #instructions {
-    font-size: 10pt;
-  }
-}
-
-@media screen and (min-width: 1600px) {
-  #breakout {
-    width: 1024px;
-    height: 768px;
-  }
-  #canvas {
-    width: 1024px;
-    height: 768px;
-  }
-  #instructions {
-    font-size: 11pt;
-  }
-}
+/* Remove old fixed-pixel media queries */

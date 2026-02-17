@@ -1,4 +1,747 @@
 //=============================================================================
+//
+// We need some ECMAScript 5 methods but we need to implement them ourselves
+// for older browsers (compatibility: http://kangax.github.com/es5-compat-table/)
+//
+//  Function.bind:        https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
+//  Object.create:        http://javascript.crockford.com/prototypal.html
+//  Object.extend:        (defacto standard like jquery $.extend or prototype's Object.extend)
+//
+//  Object.construct:     our own wrapper around Object.create that ALSO calls
+//                        an initialize constructor method if one exists
+//
+//=============================================================================
+
+if (!Function.prototype.bind) {
+	Function.prototype.bind = function (obj) {
+		let slice = [].slice
+			, args = slice.call(arguments, 1)
+			, self = this
+			, nop = function () {}
+			, bound = function () {
+				return self.apply(this instanceof nop ? this : (obj || {}), args.concat(slice.call(arguments)));
+			};
+		nop.prototype = self.prototype;
+		bound.prototype = new nop();
+		return bound;
+	};
+}
+
+if (!Object.create) {
+	Object.create = function (base) {
+		function F() {};
+		F.prototype = base;
+		return new F();
+	}
+}
+
+if (!Object.construct) {
+	Object.construct = function (base) {
+		let instance = Object.create(base);
+		if (instance.initialize)
+			instance.initialize.apply(instance, [].slice.call(arguments, 1));
+		return instance;
+	}
+}
+
+if (!Object.extend) {
+	Object.extend = function (destination, source) {
+		for (let property in source) {
+			if (source.hasOwnProperty(property))
+				destination[property] = source[property];
+		}
+		return destination;
+	};
+}
+
+if (!window.requestAnimationFrame) { // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+	window.requestAnimationFrame = window.webkitRequestAnimationFrame ||
+		window.mozRequestAnimationFrame ||
+		window.oRequestAnimationFrame ||
+		window.msRequestAnimationFrame ||
+		function (callback, element) {
+			window.setTimeout(callback, 1000 / 60);
+		}
+}
+
+
+//=============================================================================
+// Minimal DOM Library ($)
+//=============================================================================
+
+Element = function () {
+
+	let instance = {
+
+		_extended: true,
+
+		showIf: function (on) {
+			if (on) this.show();
+			else this.hide();
+		}
+		, show: function () {
+			this.style.display = '';
+		}
+		, hide: function () {
+			this.style.display = 'none';
+		}
+		, update: function (content) {
+			this.innerHTML = content;
+		},
+
+		hasClassName: function (name) {
+			return (new RegExp("(^|\s*)" + name + "(\s*|$)")).test(this.className)
+		}
+		, addClassName: function (name) {
+			this.toggleClassName(name, true);
+		}
+		, removeClassName: function (name) {
+			this.toggleClassName(name, false);
+		}
+		, toggleClassName: function (name, on) {
+			let classes = this.className.split(' ');
+			let n = classes.indexOf(name);
+			on = (typeof on == 'undefined') ? (n < 0) : on;
+			if (on && (n < 0))
+				classes.push(name);
+			else if (!on && (n >= 0))
+				classes.splice(n, 1);
+			this.className = classes.join(' ');
+		}
+	};
+
+	let get = function (ele) {
+		if (typeof ele == 'string')
+			ele = document.getElementById(ele);
+		if (!ele._extended)
+			Object.extend(ele, instance);
+		return ele;
+	};
+
+	return get;
+
+}();
+
+$ = Element;
+
+//=============================================================================
+// State Machine
+//=============================================================================
+
+StateMachine = {
+
+	//---------------------------------------------------------------------------
+
+	create: function (cfg) {
+
+		let target = cfg.target || {};
+		let events = cfg.events;
+
+		let n, event, name, can = {};
+		for (n = 0; n < events.length; n++) {
+			event = events[n];
+			name = event.name;
+			can[name] = (can[name] || []).concat(event.from);
+			target[name] = this.buildEvent(name, event.from, event.to, target);
+		}
+
+		target.current = 'none';
+		target.is = function (state) {
+			return this.current == state;
+		};
+		target.can = function (event) {
+			return can[event].indexOf(this.current) >= 0;
+		};
+		target.cannot = function (event) {
+			return !this.can(event);
+		};
+
+		if (cfg.initial) { // see "initial" qunit tests for examples
+			let initial = (typeof cfg.initial == 'string') ? {
+				state: cfg.initial
+			} : cfg.initial; // allow single string to represent initial state, or complex object to configure { state: 'first', event: 'init', defer: true|false }
+			name = initial.event || 'startup';
+			can[name] = ['none'];
+			event = this.buildEvent(name, 'none', initial.state, target);
+			if (initial.defer)
+				target[name] = event; // allow caller to trigger initial transition event
+			else
+				event.call(target);
+		}
+
+		return target;
+	},
+
+	//---------------------------------------------------------------------------
+
+	buildEvent: function (name, from, to, target) {
+
+		return function () {
+
+			if (this.cannot(name))
+				throw "event " + name + " innapropriate in current state " + this.current;
+
+			let beforeEvent = this['onbefore' + name];
+			if (beforeEvent && (false === beforeEvent.apply(this, arguments)))
+				return;
+
+			if (this.current != to) {
+
+				let exitState = this['onleave' + this.current];
+				if (exitState)
+					exitState.apply(this, arguments);
+
+				this.current = to;
+
+				let enterState = this['onenter' + to] || this['on' + to];
+				if (enterState)
+					enterState.apply(this, arguments);
+			}
+
+			let afterEvent = this['onafter' + name] || this['on' + name];
+			if (afterEvent)
+				afterEvent.apply(this, arguments);
+		}
+
+	}
+
+	//---------------------------------------------------------------------------
+
+};
+
+//=============================================================================
+// GAME
+//=============================================================================
+
+Game = {
+
+	compatible: function () {
+		return Object.create &&
+			Object.extend &&
+			Function.bind &&
+			document.addEventListener && // HTML5 standard, all modern browsers that support canvas should also support add/removeEventListener
+			Game.ua.hasCanvas
+	},
+
+	start: function (id, game, cfg) {
+		if (Game.compatible())
+			return Game.current = Object.construct(Game.Runner, id, game, cfg).game; // return the game instance, not the runner (caller can always get at the runner via game.runner)
+	},
+
+	ua: function () { // should avoid user agent sniffing... but sometimes you just gotta do what you gotta do
+		let ua = navigator.userAgent.toLowerCase();
+		let key = ((ua.indexOf("opera") > -1) ? "opera" : null);
+		key = key || ((ua.indexOf("firefox") > -1) ? "firefox" : null);
+		key = key || ((ua.indexOf("chrome") > -1) ? "chrome" : null);
+		key = key || ((ua.indexOf("safari") > -1) ? "safari" : null);
+		key = key || ((ua.indexOf("msie") > -1) ? "ie" : null);
+
+		try {
+			let re = (key == "ie") ? "msie (\\d)" : key + "\\/(\\d\\.\\d)"
+			let matches = ua.match(new RegExp(re, "i"));
+			var version = matches ? parseFloat(matches[1]) : null;
+		} catch (e) {}
+
+		return {
+			full: ua
+			, name: key + (version ? " " + version.toString() : "")
+			, version: version
+			, isFirefox: (key == "firefox")
+			, isChrome: (key == "chrome")
+			, isSafari: (key == "safari")
+			, isOpera: (key == "opera")
+			, isIE: (key == "ie")
+			, hasCanvas: (document.createElement('canvas').getContext)
+			, hasAudio: (typeof (Audio) != 'undefined')
+			, hasTouch: ('ontouchstart' in window)
+		}
+	}(),
+
+	addEvent: function (obj, type, fn) {
+		$(obj).addEventListener(type, fn, false);
+	}
+	, removeEvent: function (obj, type, fn) {
+		$(obj).removeEventListener(type, fn, false);
+	},
+
+	windowWidth: function () {
+		return window.innerWidth || /* ie */ document.documentElement.offsetWidth;
+	}
+	, windowHeight: function () {
+		return window.innerHeight || /* ie */ document.documentElement.offsetHeight;
+	},
+
+	ready: function (fn) {
+		if (Game.compatible())
+			Game.addEvent(document, 'DOMContentLoaded', fn);
+	},
+
+	renderToCanvas: function (width, height, render, canvas) { // http://kaioa.com/node/103
+		canvas = canvas || document.createElement('canvas');
+		canvas.width = width;
+		canvas.height = height;
+		render(canvas.getContext('2d'));
+		return canvas;
+	},
+
+	loadScript: function (src, cb) {
+		let head = document.getElementsByTagName('head')[0];
+		let s = document.createElement('script');
+		head.appendChild(s);
+		if (Game.ua.isIE) {
+			s.onreadystatechange = function (e) {
+				if (e.currentTarget.readyState == 'loaded')
+					cb(e.currentTarget);
+			}
+		} else {
+			s.onload = function (e) {
+				cb(e.currentTarget);
+			}
+		}
+		s.type = 'text/javascript';
+		s.src = src;
+	},
+
+	loadImages: function (sources, callback) {
+		/* load multiple images and callback when ALL have finished loading */
+		let images = {};
+		let count = sources ? sources.length : 0;
+		if (count == 0) {
+			callback(images);
+		} else {
+			for (let n = 0; n < sources.length; n++) {
+				let source = sources[n];
+				let image = document.createElement('img');
+				images[source] = image;
+				Game.addEvent(image, 'load', function () {
+					if (--count == 0) callback(images);
+				});
+				image.src = source;
+			}
+		}
+	},
+
+	loadSounds: function (cfg) {
+		cfg = cfg || {};
+		if (typeof soundManager == 'undefined') {
+			let path = cfg.path || 'sound/soundmanager2-nodebug-jsmin.js';
+			let swf = cfg.swf || 'sound/swf';
+			window.SM2_DEFER = true;
+			Game.loadScript(path, function () {
+				window.soundManager = new SoundManager();
+				soundManager.useHighPerformance = true;
+				soundManager.useFastPolling = true;
+				soundManager.url = swf;
+				soundManager.defaultOptions.volume = 50; // shhh!
+				soundManager.onready(function () {
+					Game.loadSounds(cfg);
+				});
+				soundManager.beginDelayedInit();
+			});
+		} else {
+			let sounds = [];
+			for (let id in cfg.sounds) {
+				sounds.push(soundManager.createSound({
+					id: id
+					, url: cfg.sounds[id]
+				}));
+			}
+			if (cfg.onload)
+				cfg.onload(sounds);
+		}
+	},
+
+	random: function (min, max) {
+		return (min + (Math.random() * (max - min)));
+	},
+
+	randomInt: function (min, max) {
+		return Math.floor(Math.random() * max) + min;
+	},
+
+	randomChoice: function (choices) {
+		return choices[Math.round(Game.random(0, choices.length - 1))];
+	},
+
+	randomBool: function () {
+		return Game.randomChoice([true, false]);
+	},
+
+	timestamp: function () {
+		return new Date().getTime();
+	},
+
+	THREESIXTY: Math.PI * 2,
+
+	KEY: {
+		BACKSPACE: 8
+		, TAB: 9
+		, RETURN: 13
+		, ESC: 27
+		, SPACE: 32
+		, LEFT: 37
+		, UP: 38
+		, RIGHT: 39
+		, DOWN: 40
+		, DELETE: 46
+		, HOME: 36
+		, END: 35
+		, PAGEUP: 33
+		, PAGEDOWN: 34
+		, INSERT: 45
+		, ZERO: 48
+		, ONE: 49
+		, TWO: 50
+		, A: 65
+		, D: 68
+		, L: 76
+		, P: 80
+		, Q: 81
+		, TILDA: 192
+	},
+
+	//-----------------------------------------------------------------------------
+
+	Math: {
+
+		bound: function (box) {
+			if (box.radius) {
+				box.w = 2 * box.radius;
+				box.h = 2 * box.radius;
+				box.left = box.x - box.radius;
+				box.right = box.x + box.radius;
+				box.top = box.y - box.radius;
+				box.bottom = box.y + box.radius;
+			} else {
+				box.left = box.x;
+				box.right = box.x + box.w;
+				box.top = box.y;
+				box.bottom = box.y + box.h;
+			}
+			return box;
+		},
+
+		overlap: function (box1, box2, returnOverlap) {
+			if ((box1.right < box2.left) ||
+				(box1.left > box2.right) ||
+				(box1.top > box2.bottom) ||
+				(box1.bottom < box2.top)) {
+				return false;
+			} else {
+				if (returnOverlap) {
+					let left = Math.max(box1.left, box2.left);
+					let right = Math.min(box1.right, box2.right);
+					let top = Math.max(box1.top, box2.top);
+					let bottom = Math.min(box1.bottom, box2.bottom);
+					return {
+						x: left
+						, y: top
+						, w: right - left
+						, h: bottom - top
+						, left: left
+						, right: right
+						, top: top
+						, bottom: bottom
+					};
+				} else {
+					return true;
+				}
+			}
+		},
+
+		normalize: function (vec, m) {
+			vec.m = this.magnitude(vec.x, vec.y);
+			if (vec.m == 0) {
+				vec.x = vec.y = vec.m = 0;
+			} else {
+				vec.m = vec.m / (m || 1);
+				vec.x = vec.x / vec.m;
+				vec.y = vec.y / vec.m;
+				vec.m = vec.m / vec.m;
+			}
+			return vec;
+		},
+
+		magnitude: function (x, y) {
+			return Math.sqrt(x * x + y * y);
+		},
+
+		move: function (x, y, dx, dy, dt) {
+			let nx = dx * dt;
+			let ny = dy * dt;
+			return {
+				x: x + nx
+				, y: y + ny
+				, dx: dx
+				, dy: dy
+				, nx: nx
+				, ny: ny
+			};
+		},
+
+		accelerate: function (x, y, dx, dy, accel, dt) {
+			let x2 = x + (dt * dx) + (accel * dt * dt * 0.5);
+			let y2 = y + (dt * dy) + (accel * dt * dt * 0.5);
+			let dx2 = dx + (accel * dt) * (dx > 0 ? 1 : -1);
+			let dy2 = dy + (accel * dt) * (dy > 0 ? 1 : -1);
+			return {
+				nx: (x2 - x)
+				, ny: (y2 - y)
+				, x: x2
+				, y: y2
+				, dx: dx2
+				, dy: dy2
+			};
+		},
+
+		intercept: function (x1, y1, x2, y2, x3, y3, x4, y4, d) {
+			let denom = ((y4 - y3) * (x2 - x1)) - ((x4 - x3) * (y2 - y1));
+			if (denom != 0) {
+				let ua = (((x4 - x3) * (y1 - y3)) - ((y4 - y3) * (x1 - x3))) / denom;
+				if ((ua >= 0) && (ua <= 1)) {
+					let ub = (((x2 - x1) * (y1 - y3)) - ((y2 - y1) * (x1 - x3))) / denom;
+					if ((ub >= 0) && (ub <= 1)) {
+						let x = x1 + (ua * (x2 - x1));
+						let y = y1 + (ua * (y2 - y1));
+						return {
+							x: x
+							, y: y
+							, d: d
+						};
+					}
+				}
+			}
+			return null;
+		},
+
+		ballIntercept: function (ball, rect, nx, ny) {
+			let pt;
+			if (nx < 0) {
+				pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny
+					, rect.right + ball.radius
+					, rect.top - ball.radius
+					, rect.right + ball.radius
+					, rect.bottom + ball.radius
+					, "right");
+			} else if (nx > 0) {
+				pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny
+					, rect.left - ball.radius
+					, rect.top - ball.radius
+					, rect.left - ball.radius
+					, rect.bottom + ball.radius
+					, "left");
+			}
+			if (!pt) {
+				if (ny < 0) {
+					pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny
+						, rect.left - ball.radius
+						, rect.bottom + ball.radius
+						, rect.right + ball.radius
+						, rect.bottom + ball.radius
+						, "bottom");
+				} else if (ny > 0) {
+					pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny
+						, rect.left - ball.radius
+						, rect.top - ball.radius
+						, rect.right + ball.radius
+						, rect.top - ball.radius
+						, "top");
+				}
+			}
+			return pt;
+		}
+
+	},
+
+	//-----------------------------------------------------------------------------
+
+	Runner: {
+
+		initialize: function (id, game, cfg) {
+			this.cfg = Object.extend(game.Defaults || {}, cfg || {});
+			this.fps = this.cfg.fps || 60;
+			this.interval = 1000.0 / this.fps;
+			this.canvas = $(id);
+
+			// FIX: Calculate initial size and DPI scale immediately
+			this.resize();
+
+			this.front = this.canvas;
+			this.front2d = this.front.getContext('2d');
+			this.addEvents();
+			this.resetStats();
+
+			this.game = Object.construct(game, this, this.cfg);
+
+			if (this.cfg.state)
+				StateMachine.create(Object.extend({
+					target: this.game
+				}, this.cfg.state));
+
+			this.initCanvas();
+		},
+
+		start: function () {
+			this.lastFrame = Game.timestamp();
+			this.timer = setInterval(this.loop.bind(this), this.interval);
+		},
+
+		stop: function () {
+			clearInterval(this.timer);
+		},
+
+		loop: function () {
+			this._start = Game.timestamp();
+			this.update((this._start - this.lastFrame) / 1000.0);
+			this._middle = Game.timestamp();
+			this.draw();
+			this._end = Game.timestamp();
+			this.updateStats(this._middle - this._start, this._end - this._middle);
+			this.lastFrame = this._start;
+		},
+
+		initCanvas: function () {
+			if (this.game && this.game.initCanvas)
+				this.game.initCanvas(this.front2d);
+		},
+
+		update: function (dt) {
+			this.game.update(dt);
+		},
+
+		draw: function () {
+			this.game.draw(this.front2d);
+			this.drawStats(this.front2d);
+		},
+
+		resetStats: function () {
+			this.stats = {
+				count: 0
+				, fps: 0
+				, update: 0
+				, draw: 0
+				, frame: 0
+			};
+		},
+
+		updateStats: function (update, draw) {
+			if (this.cfg.stats) {
+				this.stats.update = Math.max(1, update);
+				this.stats.draw = Math.max(1, draw);
+				this.stats.frame = this.stats.update + this.stats.draw;
+				this.stats.count = this.stats.count == this.fps ? 0 : this.stats.count + 1;
+				this.stats.fps = Math.min(this.fps, 1000 / this.stats.frame);
+			}
+		},
+
+		strings: {
+			frame: "frame: "
+			, fps: "fps: "
+			, update: "update: "
+			, draw: "draw: "
+			, ms: "ms"
+		},
+
+		drawStats: function (ctx) {
+			if (this.cfg.stats) {
+				ctx.fillText(this.strings.frame + Math.round(this.stats.count), this.width - 100, this.height - 60);
+				ctx.fillText(this.strings.fps + Math.round(this.stats.fps), this.width - 100, this.height - 50);
+				ctx.fillText(this.strings.update + Math.round(this.stats.update) + this.strings.ms, this.width - 100, this.height - 40);
+				ctx.fillText(this.strings.draw + Math.round(this.stats.draw) + this.strings.ms, this.width - 100, this.height - 30);
+			}
+		},
+
+		addEvents: function () {
+			Game.addEvent(document, 'keydown', this.onkeydown.bind(this));
+			Game.addEvent(document, 'keyup', this.onkeyup.bind(this));
+			Game.addEvent(window, 'resize', this.onresize.bind(this));
+		},
+
+		onresize: function () {
+			this.stop();
+			if (this.onresizeTimer) clearTimeout(this.onresizeTimer);
+			this.onresizeTimer = setTimeout(this.onresizeend.bind(this), 50);
+		},
+
+		onresizeend: function () {
+			this.resize();
+			this.start();
+		},
+
+		resize: function () {
+			// FIX: Dynamic resizing with High DPI support
+			let box = this.canvas.getBoundingClientRect();
+			let w = Math.floor(box.width);
+			let h = Math.floor(box.height);
+
+			// Handle Retina / High DPI screens
+			let ratio = window.devicePixelRatio || 1;
+			let physW = Math.floor(w * ratio);
+			let physH = Math.floor(h * ratio);
+
+			// Only resize if dimensions actually changed
+			if (this.width !== physW || this.height !== physH) {
+				this.width = physW;
+				this.height = physH;
+				this.canvas.width = physW;
+				this.canvas.height = physH;
+				this.bounds = box; // Store logical bounds for mouse mapping
+
+				if (this.game && this.game.onresize)
+					this.game.onresize(this.width, this.height);
+
+				this.initCanvas();
+			}
+		},
+
+		onkeydown: function (ev) {
+			if (this.game.onkeydown) return this.game.onkeydown(ev.keyCode);
+			else if (this.cfg.keys) return this.onkey(ev.keyCode, 'down');
+		},
+
+		onkeyup: function (ev) {
+			if (this.game.onkeyup) return this.game.onkeyup(ev.keyCode);
+			else if (this.cfg.keys) return this.onkey(ev.keyCode, 'up');
+		},
+
+		onkey: function (keyCode, mode) {
+			let n, k, i, state = this.game.current;
+			for (n = 0; n < this.cfg.keys.length; n++) {
+				k = this.cfg.keys[n];
+				k.mode = k.mode || 'up';
+				if ((k.key == keyCode) || (k.keys && (k.keys.indexOf(keyCode) >= 0))) {
+					if (!k.state || (k.state == state)) {
+						if (k.mode == mode) {
+							k.action.call(this.game);
+						}
+					}
+				}
+			}
+		},
+
+		storage: function () {
+			try {
+				return this.localStorage = this.localStorage || window.localStorage || {};
+			} catch (e) {
+				return this.localStorage = {};
+			}
+		},
+
+		alert: function (msg) {
+			this.stop();
+			result = window.alert(msg);
+			this.start();
+			return result;
+		},
+
+		confirm: function (msg) {
+			this.stop();
+			result = window.confirm(msg);
+			this.start();
+			return result;
+		}
+	} // Runner
+} // Game//=============================================================================
 // Breakout in HTML5 / Javascript with powerups and a level creator.
 // 
 //=============================================================================
@@ -6,42 +749,6 @@ window.Breakout = {
   ServerConfig: {
     url: './api/api.php',
     secret: 'ChangeMeToSomethingRandomAndLong12345'
-  },
-  startEndGameMode: function(mode) {
-      if (this.endGame.mode) return;
-      if (this.court.boss) return;
-      
-      this.endGame.mode = mode;
-      this.endGame.chosen = true;
-  
-      console.log("Starting End Game Mode:", mode);
-  
-      if (this.floaters) {
-          var titles = {
-              'bumpers': "BUMPER STUMPER!",
-              'lasers': "LASER GRID ACTIVE!",
-              'sudden': "SUDDEN DEATH!",
-              'mirror': "MIRROR WORLD!",
-              'ghosts': "GHOST BRICKS!",
-              'spikes': "BRICKS GOOD, SPIKES BAD!",
-              'ricochet': "RICOCHET!",
-              'rotate': "PIVOT!",
-              'fightback': "THEY FIGHT BACK!",
-              'virus': "VIRUS OUTBREAK!"
-          };
-          this.floaters.spawn(this.width/2, this.height/2, titles[mode] || "WARNING!", '#FF0000');
-      }
-  
-      if (mode === 'bumpers') this.initBumpers();
-      else if (mode === 'lasers') this.laserGrid.on = true;
-      else if (mode === 'sudden') this.suddenDeath = true;
-      else if (mode === 'spikes') this.initSpikes();
-      else if (mode === 'ricochet') this.initRicochet();
-      else if (mode === 'fightback') this.initFightBack();
-      else if (mode === 'virus') {
-      }
-      
-      if (this.playSound) this.playSound('suddendeath');
   },
   Floaters: {
     items: [],
@@ -62,47 +769,6 @@ window.Breakout = {
         f.y += f.vy * dt;
         if (f.life <= 0) this.items.splice(i, 1);
       }
-      if (this.achievements && (this.t % 1.0) < dt) {
-        // Construct simple active list
-        var active = {};
-        var p = this.powerup;
-        if(p.isFireActive()) active.Fireball=true;
-        if(p.isStickyActive()) active.Sticky=true;
-        var check = [
-            'isFireActive','isStickyActive','isConfusedActive','isLasersActive',
-            'isSplitActive','isChaosActive','isLightsActive','isSmallActive',
-            'isSlowActive','isFrozenActive','isExplodingActive','isGhostActive',
-            'isMagnetActive','isOrbitalsActive','isLightningActive','isXFactorActive'
-        ];
-        var list = {};
-        for(var m of check) {
-            if (p[m] && p[m]()) list[m.replace('is','').replace('Active','')] = true;
-        }
-        if (this.endGame.mode) list[this.endGame.mode] = true; // Add endgame mode as active effect
-        
-        this.achievements.checkPowerups(list);
-      }
-	  if (this.court) {
-            if (this.court.empty()) {
-                this.winLevel();
-                return;
-            }
-
-            if (!this.endGame.mode && !this.court.boss) {
-                var remaining = 0;
-                for (var i = 0; i < this.court.bricks.length; i++) {
-                    if (!this.court.bricks[i].hit) remaining++;
-                }
-
-                if (remaining > 0 && remaining < 5) {
-                    console.log("Force Triggering End Game (Bricks:", remaining, ")");                   
-                    var modes = ['bumpers','lasers','sudden','mirror','ghosts','spikes','ricochet','rotate','fightback','virus'];
-                    var nextMode = modes[Math.floor(Math.random() * modes.length)];
-                    
-                    this.startEndGameMode(nextMode);
-                }
-            }
-        }
     },
     draw: function (ctx) {
       ctx.save();
@@ -299,10 +965,7 @@ window.Breakout = {
               name: name,
               score: score
             }).then(function () {
-              if (window.Breakout && window.Breakout.achievements) {
-                  window.Breakout.achievements.unlock('look_at_me');
-              }
-			  return resolve(true);
+              return resolve(true);
             }).catch(function (e) {
               try {
                 console.warn('[HS] submit error', e);
@@ -536,43 +1199,32 @@ window.Breakout = {
     var info = this.themeAudioFor(themeName || this.theme);
     var bgm = soundManager.getSoundById('bgm');
 
-    // 1. Destroy if wrong theme
+    // If we have a BGM track but it's the WRONG theme, destroy it.
     if (bgm && bgm.url !== info.url) {
       bgm.stop();
       soundManager.destroySound('bgm');
-      bgm = null; 
+      bgm = null; // Force recreation below
     }
 
-    // 2. Create if missing
+    // Create if missing (or destroyed above)
     if (!bgm) {
       bgm = soundManager.createSound({
         id: 'bgm',
         url: info.url,
-        volume: 55, 
+        volume: 55,
+        // FIX: Reliable Loop Callback
         onfinish: function () {
-           // Simple Looping
-           var b = soundManager.getSoundById('bgm');
-           if (b) b.play(); 
+          this.play();
         }
       });
     }
 
-    // 3. CHECK SETTINGS
-    if (!this.sound) {
-        // If sound is OFF, ensure it is muted and NOT playing
-        soundManager.mute('bgm');
-        if (bgm.playState === 1) bgm.pause(); 
-        this._bgmState = 'idle';
-        return; // <--- STOP HERE. Do not call play().
-    }
-
-    // 4. Sound is ON: Unmute and Play
-    soundManager.unmute('bgm');
-    bgm.setVolume(55);
-
+    // Play if not already playing
     if (bgm.playState !== 1) {
+      // Ensure we catch autoplay blocks
       try {
         var p = bgm.play();
+        // Modern SM2/Browsers return promises sometimes; catch rejection
         if (p && p.catch) p.catch(function (e) {
           console.log("Autoplay blocked", e);
         });
@@ -779,8 +1431,7 @@ window.Breakout = {
       }
     }],
     sounds: {
-      achievement: './sound/breakout/achievement.mp3',
-	  amongus: './sound/breakout/amongus.mp3',
+      amongus: './sound/breakout/amongus.mp3',
       breaker: './sound/breakout/combobreaker.mp3',
       bumper: './sound/breakout/bumper.mp3',
       comeon: './sound/breakout/come-on.mp3',
@@ -881,7 +1532,7 @@ window.Breakout = {
           // Ensure visibility styles
           levelSpan.style.display = "block";
           levelSpan.style.textAlign = "center";
-          levelSpan.style.margin = "-20px 0";
+          levelSpan.style.margin = "4px 0";
         }
       }, 100);
     }
@@ -901,7 +1552,7 @@ window.Breakout = {
     this.height = runner.height;
     this.level = 0;
     this.storage = runner.storage();
-    this.theme = this.determineLevelTheme();
+    this.theme = this.determineLevelTheme(); // FIX: Set initial theme
     this.color = cfg.color;
     this.sound = (this.storage.sound == "true");
     if (typeof this.storage.sound === 'undefined') {
@@ -913,8 +1564,6 @@ window.Breakout = {
     this.score = Object.construct(Breakout.Score, this, cfg.score);
     this.powerup = Object.construct(Breakout.Powerups, this, cfg, this.ball, this.paddle, this.score);
     this.particles = Object.construct(Breakout.Particles, this, {});
-    this.achievements = Object.create(Breakout.Achievements);
-    this.achievements.initialize(this);
     this.bg = Object.construct(Breakout.BG, this, {
       game: this // <-- ensure BG can reach the game instance
     });
@@ -1052,8 +1701,8 @@ window.Breakout = {
   reset: function (startLevel) {
     this.endGame = {};
     this.current = 'start';
-    this.theme = this.determineLevelTheme();
-    this.bg.setTheme(this.theme); 
+    this.theme = this.determineLevelTheme(); // FIX: Determine theme on reset
+    this.bg.setTheme(this.theme); // FIX: Apply theme on reset
     if (this.bg && this.bg.buildLayers) this.bg.buildLayers();
     this.resetStats(startLevel);
     this.messages.reset();
@@ -1067,8 +1716,7 @@ window.Breakout = {
     this.stats.level = startLevel || 0;
   },
   startLevel: function () {
-    this._levelDeaths = 0;
-	// reset end-game variants0
+    // reset end-game variants0
     this.suddenDeath = false;
     this.laserGrid = {
       lines: [],
@@ -1096,8 +1744,8 @@ window.Breakout = {
       solid: true
     };
     this.bricks = [];
-    this.theme = this.determineLevelTheme(); 
-    this.bg.setTheme(this.theme); 
+    this.theme = this.determineLevelTheme(); // FIX: Determine theme before loading bricks
+    this.bg.setTheme(this.theme); // FIX: Apply theme before loading bricks
     if (this.bg && this.bg.buildLayers) this.bg.buildLayers();
 
     if (Breakout.Levels[this.level]) {
@@ -1562,10 +2210,13 @@ window.Breakout = {
     if (!items.length) return;
 
     // 2. Setup Layout
+    // FIX: Push down 3.5 chunks to clear Help button
     var y = c.top + c.chunk * 1.5;
 
+    // FIX: Right align against the screen edge with a small margin
     let x = this.width - 6;
 
+    // FIX: Smaller font to fit long text
     var fontSize = Math.max(11, Math.floor(c.chunk * 0.45));
     var rowH = Math.floor(fontSize * 1.5);
 
@@ -1765,136 +2416,38 @@ window.Breakout = {
     this.addEvents();
     this.runner.start();
   },
-
   addEvents: function () {
     this._helpKeyBound = true;
     var self = this;
-    
-    // 1. SOUND CHECKBOX LISTENER
-    var soundBtn = document.getElementById('sound');
-    if (soundBtn) {
-        Game.addEvent('sound', 'change', function(e) {
-            self.sound = e.target.checked;
-            self.storage.sound = self.sound;
-            
-            // A. Handle SoundManager2 (BGM)
-            if (typeof soundManager !== 'undefined') {
-                if (self.sound) {
-                    soundManager.unmute('bgm');
-                    // If we were paused/idle, try to start it up
-                    if (self._bgmState !== 'playing') self.tryStartBGM();
-                } else {
-                    soundManager.mute('bgm');
-                }
-            }
-
-            // B. Handle SFX (Web Audio)
-            if (self.audio && self.audio.setVolume) {
-                self.audio.setVolume(self.sound ? 1.0 : 0.0);
-            }
-        });
-    }
-
-    // 2. HUD Buttons
-    var prevBtn = document.getElementById('prev');
-    if (prevBtn) Game.addEvent('prev', 'click', this.prevLevel.bind(this, false));
-    
-    var nextBtn = document.getElementById('next');
-    if (nextBtn) Game.addEvent('next', 'click', this.nextLevel.bind(this, false));
-    
-    var instBtn = document.getElementById('instructions');
-    if (instBtn) {
-        Game.addEvent('instructions', 'click', this.play.bind(this));
-        Game.addEvent('instructions', 'touchstart', this.play.bind(this));
-    }
-    
-    if (document.getElementById('upload')) Game.addEvent('upload', 'click', this.load.bind(this, true));
-
-    // 3. Canvas Interaction
-    if (this.runner && this.runner.canvas) {
-        Game.addEvent(this.runner.canvas, 'touchstart', this.ontouchstart.bind(this));
-        Game.addEvent(this.runner.canvas, 'touchmove', this.ontouchmove.bind(this));
-        Game.addEvent(this.runner.canvas, 'touchend', this.ontouchend.bind(this));
-        Game.addEvent(this.runner.canvas, 'mousemove', this.onmousemove.bind(this));
-        
-        Game.addEvent(this.runner.canvas, 'click', (e) => {
-             var rect = this.runner.canvas.getBoundingClientRect();
-             var scaleX = this.width / rect.width;
-             var scaleY = this.height / rect.height;
-             var mx = (e.clientX - rect.left) * scaleX;
-             var my = (e.clientY - rect.top) * scaleY;
-
-             // Help Overlay
-             if (this.helpOverlay && this.helpOverlay.show) {
-               var c = this._ui && this._ui.help && this._ui.help.close;
-               if (c && mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) {
-                 e.preventDefault();
-                 if (self.game && self.game.playSound) self.game.playSound('menu_select');
-                 this.toggleHelp(false);
-               }
-               return; 
-             }
-             
-             // Leaderboard
-             if (this.leaderboardOverlay && this.leaderboardOverlay.show) {
-                var lb = this._ui.lb;
-                if (!lb) return;
-                if (lb.close && mx >= lb.close.x && mx <= lb.close.x + lb.close.w && my >= lb.close.y && my <= lb.close.y + lb.close.h) {
-                  e.preventDefault();
-                  if (self.game && self.game.playSound) self.game.playSound('menu_select');
-                  this.closeLeaderboard();
-                  return;
-                }
-                if (lb.toggle && mx >= lb.toggle.x && mx <= lb.toggle.x + lb.toggle.w && my >= lb.toggle.y && my <= lb.toggle.y + lb.toggle.h) {
-                  e.preventDefault();
-                  var newMode = (this.leaderboardOverlay.mode === 'global') ? 'local' : 'global';
-                  this.openLeaderboard(newMode);
-                  if (self.game && self.game.playSound) self.game.playSound('menu_select');
-                  return;
-                }
-                return;
-             }
-
-             // Help Button
-             var hBtn = this.getHelpButtonRect();
-             var hitPad = hBtn.w * 0.5;
-             if (mx >= hBtn.x - hitPad && mx <= hBtn.x + hBtn.w + hitPad &&
-               my >= hBtn.y - hitPad && my <= hBtn.y + hBtn.h + hitPad) {
-               e.preventDefault();
-               if (self.game && self.game.playSound) self.game.playSound('menu_select');
-               this.toggleHelp();
-               return;
-             }
-             
-             // Menu Leaderboard
-             if (this.is && this.is('menu')) {
-               var lbBtn = this._ui && this._ui.menu && this._ui.menu.leader;
-               if (!lbBtn) {
-                  var bw = Math.min(300, this.width * 0.5), bh = 44;
-                  const cx = this.width / 2;
-                  var by = Math.floor(this.height * 0.90);
-                  lbBtn = { x: cx - bw / 2, y: by - bh / 2, w: bw, h: bh };
-               }
-               if (lbBtn && mx >= lbBtn.x && mx <= lbBtn.x + lbBtn.w && my >= lbBtn.y && my <= lbBtn.y + lbBtn.h) {
-                 e.preventDefault();
-                 if (self.game && self.game.playSound) self.game.playSound('menu_select');
-                 this.openLeaderboard();
-                 return;
-               }
-             }
-        });
-    }
-
-    Game.addEvent(document.body, 'touchmove', function (event) { event.preventDefault(); });
-
-    // 4. Keyboard Shortcuts
-    Game.addEvent(document, 'keydown', (e) => {
-      if (!this.is || !this.is('menu')) return;
-      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); this.play(); }
+    Game.addEvent('prev', 'click', this.prevLevel.bind(this, false));
+    Game.addEvent('next', 'click', this.nextLevel.bind(this, false));
+    // Click/tap the instructions to start:
+    Game.addEvent('instructions', 'click', this.play.bind(this));
+    Game.addEvent('instructions', 'touchstart', this.play.bind(this));
+    Game.addEvent(this.runner.canvas, 'touchstart', this.ontouchstart.bind(this));
+    Game.addEvent(this.runner.canvas, 'touchmove', this.ontouchmove.bind(this));
+    Game.addEvent(this.runner.canvas, 'touchend', this.ontouchend.bind(this));
+    Game.addEvent(this.runner.canvas, 'mousemove', this.onmousemove.bind(this));
+    Game.addEvent(document.body, 'touchmove', function (event) {
+      event.preventDefault();
     });
+    Game.addEvent('upload', 'click', this.load.bind(this, true));
+
+    // Keyboard start only when in menu:
     Game.addEvent(document, 'keydown', (e) => {
       if (!this.is || !this.is('menu')) return;
-      if (e.key && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); this.openLeaderboard(); }
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        this.play();
+      }
+    });
+    // View leaderboard in menu with 'L'
+    Game.addEvent(document, 'keydown', (e) => {
+      if (!this.is || !this.is('menu')) return;
+      if (e.key && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault();
+        this.openLeaderboard();
+      }
     });
     Game.addEvent(document, 'keydown', (e) => {
       if (!this.is || !this.is('menu')) return;
@@ -1904,6 +2457,7 @@ window.Breakout = {
         e.preventDefault();
       }
     });
+    // Close help or leaderboard via ESC
     Game.addEvent(document, 'keydown', (e) => {
       if (this.leaderboardOverlay && (this.leaderboardOverlay.show || self.helpOverlay.show) && e.key === 'Escape') {
         e.preventDefault();
@@ -1912,6 +2466,96 @@ window.Breakout = {
         this.closeLeaderboard();
       }
     });
+
+    /* UNIFIED MOUSE CLICK HANDLER */
+    Game.addEvent(this.runner.canvas, 'click', (e) => {
+      // 1. Setup coordinates
+      // Because we now handle DPI in game.js, 'rect' is logical CSS pixels,
+      // but 'this.width/height' are physical pixels.
+      // e.clientX is logical. We need to map logical -> physical.
+      var rect = this.runner.canvas.getBoundingClientRect();
+      var scaleX = this.width / rect.width;
+      var scaleY = this.height / rect.height;
+
+      var mx = (e.clientX - rect.left) * scaleX;
+      var my = (e.clientY - rect.top) * scaleY;
+
+      // 2. Check Help Overlay Close Button (High priority)
+      if (this.helpOverlay && this.helpOverlay.show) {
+        var c = this._ui && this._ui.help && this._ui.help.close;
+        if (c && mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) {
+          e.preventDefault();
+          if (self.game && self.game.playSound) self.game.playSound('menu_select');
+          this.toggleHelp(false);
+        }
+        return; // Block other clicks when overlay is open
+      }
+
+      // 3. Leaderboard Overlay Clicks
+      if (this.leaderboardOverlay && this.leaderboardOverlay.show) {
+        // FIX: Define 'lb' immediately so the rest of the block can use it
+        var lb = this._ui.lb;
+
+        // Guard against lb being missing (e.g. if draw hasn't happened yet)
+        if (!lb) return;
+
+        // Check Close Button
+        if (lb.close && mx >= lb.close.x && mx <= lb.close.x + lb.close.w && my >= lb.close.y && my <= lb.close.y + lb.close.h) {
+          e.preventDefault();
+          if (self.game && self.game.playSound) self.game.playSound('menu_select');
+          this.closeLeaderboard();
+          return;
+        }
+
+        // Check Toggle Button (Local <-> Global)
+        if (lb.toggle && mx >= lb.toggle.x && mx <= lb.toggle.x + lb.toggle.w && my >= lb.toggle.y && my <= lb.toggle.y + lb.toggle.h) {
+          e.preventDefault();
+          var newMode = (this.leaderboardOverlay.mode === 'global') ? 'local' : 'global';
+          this.openLeaderboard(newMode);
+          if (self.game && self.game.playSound) self.game.playSound('menu_select');
+          return;
+        }
+
+        return; // Consume click if overlay is visible
+      }
+
+      // 4. HUD: Help Button (Dynamic Sizing)
+      var hBtn = this.getHelpButtonRect();
+      // Increase hitbox by 50% of the button size for easier clicking
+      var hitPad = hBtn.w * 0.5;
+      if (mx >= hBtn.x - hitPad && mx <= hBtn.x + hBtn.w + hitPad &&
+        my >= hBtn.y - hitPad && my <= hBtn.y + hBtn.h + hitPad) {
+        e.preventDefault();
+        if (self.game && self.game.playSound) self.game.playSound('menu_select');
+        this.toggleHelp();
+        return;
+      }
+
+      // 5. MENU SPECIFIC CLICKS (Leaderboard Open)
+      if (this.is && this.is('menu')) {
+        var lbBtn = this._ui && this._ui.menu && this._ui.menu.leader;
+        // Fallback calculation if _ui isn't populated yet
+        if (!lbBtn) {
+          var bw = Math.min(300, this.width * 0.5),
+            bh = 44;
+          const cx = this.width / 2;
+          var by = Math.floor(this.height * 0.90);
+          lbBtn = {
+            x: cx - bw / 2,
+            y: by - bh / 2,
+            w: bw,
+            h: bh
+          };
+        }
+        if (lbBtn && mx >= lbBtn.x && mx <= lbBtn.x + lbBtn.w && my >= lbBtn.y && my <= lbBtn.y + lbBtn.h) {
+          e.preventDefault();
+          if (self.game && self.game.playSound) self.game.playSound('menu_select');
+          this.openLeaderboard();
+          return;
+        }
+      }
+    });
+    /* LEADERBOARD OVERLAY: 'R' to reset */
     Game.addEvent(document, 'keydown', (e) => {
       if (!(this.leaderboardOverlay && this.leaderboardOverlay.show)) return;
       if (e.key && (e.key === 'r' || e.key === 'R')) {
@@ -1921,7 +2565,6 @@ window.Breakout = {
       }
     });
   },
-  
   // Helper to toggle Help Overlay and handle DOM visibility
   toggleHelp: function (forceState) {
     // Toggle or force state
@@ -1961,66 +2604,53 @@ window.Breakout = {
     }
   },
   update: function (dt) {
-    // --- FPS COUNTER ---
-    this.fpsTimer = (this.fpsTimer || 0) + dt;
-    this.fpsCount = (this.fpsCount || 0) + 1;
-    if (this.fpsTimer >= 1.0) {
-        this.currentFps = this.fpsCount;
-        //console.log("FPS:", this.currentFps);
-        this.fpsCount = 0;
-        this.fpsTimer -= 1.0;
-    }
-
     // 1. Capture previous state for "Missed" detection
     var wasDilated = (this.dilation && this.dilation.active);
 
-    // 2. Reset Dilation State and Reuse Object
+    // 2. Reset Dilation State
     var slowDt = dt;
-    if (!this.dilation) {
-        this.dilation = { active: false, zoom: 1.0, focus: { x: this.width/2, y: this.height/2 } };
-    } else {
-        this.dilation.active = false;
-        this.dilation.zoom = 1.0;
-        this.dilation.focus.x = this.width / 2;
-        this.dilation.focus.y = this.height / 2;
-    }
+    this.dilation = {
+      active: false,
+      zoom: 1.0,
+      focus: {
+        x: this.width / 2,
+        y: this.height / 2
+      }
+    };
 
     // 3. Logic: Live Bricks & Dilation Calc
     if (this.court && this.ball && !this.levelOverlay.show && !this.gameoverOverlay.show) {
-      
-      // Count without creating a new array
-      var remaining = 0;
-      var lastB = null;
+      var liveBricks = [];
       if (this.court.bricks) {
         for (var i = 0; i < this.court.bricks.length; i++) {
-          if (!this.court.bricks[i].hit) {
-              remaining++;
-              lastB = this.court.bricks[i];
-          }
+          if (!this.court.bricks[i].hit) liveBricks.push(this.court.bricks[i]);
         }
       }
+      var remaining = liveBricks.length;
 
-      // A. FORCE SHUFFLE on last 5 bricks
+      // A. FORCE SHUFFLE on last 5 bricks unless we're in sudden death mode
       if (remaining <= 5 && remaining > 0) {
+        // FIX: Disable Shuffle if Sudden Death (The Crusher) is active
         if (this.endGame && this.endGame.mode === 'sudden') {
           this.court.shuffleActive = false;
         } else {
           this.court.shuffleActive = true;
         }
       } else {
+        // Only disable if the EndGame mode isn't 'shuffle'
         if (this.endGame && this.endGame.mode !== 'shuffle') {
           this.court.shuffleActive = false;
         }
       }
 
       // B. TIME DILATION on Last Brick
-      if (remaining === 1 && this.ball.balls.length > 0 && lastB) {
+      if (remaining === 1 && this.ball.balls.length > 0) {
+        var lastB = liveBricks[0];
         var targetX = lastB.x + lastB.w / 2;
         var targetY = lastB.y + lastB.h / 2;
 
         var minDist = Infinity;
         var closestBall = this.ball.balls[0];
-        
         for (var k = 0; k < this.ball.balls.length; k++) {
           var b = this.ball.balls[k];
           var dist = Math.sqrt(Math.pow(b.x - targetX, 2) + Math.pow(b.y - targetY, 2));
@@ -2047,6 +2677,7 @@ window.Breakout = {
       }
 
       // C. TRIGGER "COME ON!" SOUND
+      // If we were dilated last frame, but NOT this frame, AND the brick is still alive.
       if (wasDilated && !this.dilation.active && remaining === 1) {
         if (this.playSound) this.playSound('comeon');
       }
@@ -2056,11 +2687,9 @@ window.Breakout = {
     this.updateMirrorWorld(slowDt);
     this.updateGhostBricks(slowDt);
     if (this.laserGrid && this.laserGrid.lines && this.laserGrid.lines.length) this.updateLaserGrid(slowDt);
-    
     if (this.endGame && this.endGame.mode === 'fightback') {
-        if (this.updateFightLasers) this.updateFightLasers(dt);
+      if (this.updateFightback) this.updateFightback(slowDt);
     }
-    
     if (this.endGame && this.endGame.mode !== null && this.updateTimeDilation) {
       this.updateTimeDilation(slowDt);
     }
@@ -2068,32 +2697,34 @@ window.Breakout = {
       this.updateRicochet(slowDt);
     }
 
-    // End-Game Chooser (Inlined for Performance)
-    if (this.court) {
-        // Reuse our 'remaining' count from above if possible, but recalculate to be safe/independent
+    // End-Game Chooser
+    (function endGameChooser() {
+      try {
+        if (!this.court) return;
         var rem = 0;
         var bs = this.court.bricks || [];
-        for (let i = 0; i < bs.length; i++) if (!bs[i].hit) rem++;
+        for (let i = 0; i < bs.length; i++)
+          if (!bs[i].hit) rem++;
 
         if (rem <= 5 && this.endGame && !this.endGame.chosen) {
-            if (this.playSound) this.playSound('finish');
-            this.endGame.chosen = true;
+          if (this.playSound) this.playSound('finish');
+          this.endGame.chosen = true;
 
-            // RESTORED FULL LIST (Remove 'fightback' hardcode if you want random again)
-            var modes = ['bumpers', 'sudden', 'lasers', 'mirror', 'ghosts', 'spikes', 'ricochet', 'rotate', 'fightback', 'virus'];
-            // var modes = ['fightback']; // Uncomment this line to force Fightback for testing
-            
-            this.endGame.mode = modes[(Math.random() * modes.length) | 0];
+          var modes = ['bumpers', 'sudden', 'lasers', 'mirror', 'ghosts', 'spikes', 'ricochet', 'rotate', 'fightback', 'virus'];
+          this.endGame.mode = modes[(Math.random() * modes.length) | 0];
 
-            if (this.endGame.mode == 'bumpers') this.spawnBumpers();
-            else if (this.endGame.mode == 'sudden') this.activateSuddenDeath();
-            else if (this.endGame.mode == 'lasers') this.spawnLaserGrid();
-            else if (this.endGame.mode == 'mirror') { if (this.playSound) this.playSound('portal'); }
-            else if (this.endGame.mode == 'ghosts') { if (this.playSound) this.playSound('ghost'); }
-            else if (this.endGame.mode == 'spikes') this.startSpikes && this.startSpikes();
-            else if (this.endGame.mode == 'fightback') this.startFightback && this.startFightback();
+          if (this.endGame.mode == 'bumpers') this.spawnBumpers();
+          else if (this.endGame.mode == 'sudden') this.activateSuddenDeath();
+          else if (this.endGame.mode == 'lasers') this.spawnLaserGrid();
+          else if (this.endGame.mode == 'mirror') {
+            if (this.playSound) this.playSound('portal');
+          } else if (this.endGame.mode == 'ghosts') {
+            if (this.playSound) this.playSound('ghost');
+          } else if (this.endGame.mode == 'spikes') this.startSpikes && this.startSpikes();
+          else if (this.endGame.mode == 'fightback') this.startFightback && this.startFightback();
         }
-    }
+      } catch (_) {}
+    }).call(this);
 
     // Audio Beat
     if (this.beat) {
@@ -2109,20 +2740,7 @@ window.Breakout = {
     if (this.bg) this.bg.update(dt);
     if (this.beatConductor) this.beatConductor.update();
 
-    if (this.is && this.is('menu')) {
-        if (navigator.getGamepads) {
-            var gp = navigator.getGamepads()[0];
-            if (gp && (gp.buttons[0].pressed || gp.buttons[9].pressed)) { // A or Start
-                 if (!this._gpMenuDebounce) {
-                     this._gpMenuDebounce = true;
-                     this.play();
-                 }
-            } else {
-                 this._gpMenuDebounce = false;
-            }
-        }
-        return;
-    }
+    if (this.is && this.is('menu')) return;
 
     // Physics
     this.court.update(slowDt);
@@ -2236,6 +2854,7 @@ window.Breakout = {
     ctx.save();
     var alpha = 0.95 * H.alpha;
 
+    // FIX: Scale dimensions based on court chunk size
     const c = this.court;
     // Fallback if court isn't ready
     var chunk = c ? c.chunk : Math.max(20, Math.min(this.width, this.height) / 30);
@@ -2246,6 +2865,7 @@ window.Breakout = {
     let x = (this.width - w) / 2,
       y = (this.height - h) / 2;
 
+    // FIX: Fonts relative to chunk
     var fsTitle = Math.round(chunk * 0.7);
     var fsBody = Math.round(chunk * 0.55);
     var fsSmall = Math.round(chunk * 0.40);
@@ -2848,6 +3468,7 @@ window.Breakout = {
       if (b.pos) b.pos.y += rows;
 
       // CRITICAL: Synchronize Collision Box
+      // (Fixes the "Ghost Collision" bug)
       if (typeof Game !== 'undefined' && Game.Math && Game.Math.bound) {
         Game.Math.bound(b);
       } else {
@@ -3006,8 +3627,6 @@ window.Breakout = {
     if (!c) return;
     var bricks = c.bricks || [];
     var p = (this.ghosts && this.ghosts.phase) || 0;
-	var alpha = (this.ghosts.phase * 0.4); 
-    if (alpha <= 0) return;
 
     // Pulse amount; brighter when ghosted, lighter when solid
     var veilAlpha = (this.ghosts && this.ghosts.solid) ? 0.20 : 0.38;
@@ -3026,23 +3645,11 @@ window.Breakout = {
         w = b.right - b.left,
         h = b.bottom - b.top;
 
-      if (!isFinite(b.x) || !isFinite(b.y) || !isFinite(b.w) || !isFinite(b.h)) continue;
-	  
-      var cx = b.x + b.w/2;
-      var cy = b.y + b.h/2;
-      
-      // Gradient Safety
-      if (!isFinite(cx) || !isFinite(cy)) continue  
-      var grd = ctx.createRadialGradient(cx, cy, 2, cx, cy, b.w);
-      grd.addColorStop(0, 'rgba(255,255,255,' + alpha + ')');
-      grd.addColorStop(1, 'rgba(255,255,255,0)');
-      
-      ctx.fillStyle = grd;
-      ctx.fillRect(b.x, b.y, b.w, b.h);
-      
-	  grd.addColorStop(0, 'rgba(120,180,255,' + (0.10 + pulse * 0.25).toFixed(3) + ')');
-      grd.addColorStop(1, 'rgba(40,80,180,' + (veilAlpha).toFixed(3) + ')');
-      ctx.fillStyle = grd;
+      // 1) Veil fill
+      var g = ctx.createLinearGradient(x, y, x, y + h);
+      g.addColorStop(0, 'rgba(120,180,255,' + (0.10 + pulse * 0.25).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(40,80,180,' + (veilAlpha).toFixed(3) + ')');
+      ctx.fillStyle = g;
       ctx.fillRect(x, y, w, h);
 
       // 2) Perimeter glow when ghosted (thin rim)
@@ -3387,7 +3994,7 @@ window.Breakout = {
     }
     ctx.restore();
   },
-  // Time Dilation
+  // Time Dilation - was initially an end-game mode, but not fully working. Need to fix.
   // Returns [0.35..1.00] multiplier based on distance to the last brick center.
   getTimeDilationScaleFor: function (x, y) {
     if (!(this.endGame && this.endGame.mode)) return 1;
@@ -3476,15 +4083,6 @@ window.Breakout = {
     // Only active if we are in the "last brick" state (dilation active)
     // OR if we just want to highlight the last brick generally
     if (!this.court || !this.court.bricks) return;
-    if (!this.dilation || !this.dilation.active) return;
-    var focus = this.dilation.focus;
-    
-    // SAFETY CHECK
-    if (!focus || !isFinite(focus.x) || !isFinite(focus.y)) return;
-    var r = Math.max(this.width, this.height);
-    
-    // Gradient Safety
-    if (!isFinite(r) || r <= 0) return;
 
     // 1. Find the last live brick
     var live = [];
@@ -3752,78 +4350,123 @@ window.Breakout = {
       this._fightTimers[br._uid] = now + (600 + Math.random() * 1800) | 0;
     }
   },
-  updateFightLasers: function(dt) {
-      if (!this.fightLasers) this.fightLasers = [];
-      if (!this._fightTimers) this._fightTimers = {};
+  _updateFightbackSpawn: function (dt) {
+    // Spawn new lasers from live bricks according to their independent timers.
+    var c = this.court,
+      now = Date.now();
+    var remaining = Math.max(0, c.numbricks - c.numhits);
+    // Allow up to "remaining" lasers concurrently, minimum cap of 4.
+    var maxBeams = Math.max(remaining, 4);
 
-      // --- SPAWN LOGIC ---
-      this._fightTimers.spawn = (this._fightTimers.spawn || 0) - dt;
-      if (this._fightTimers.spawn <= 0) {
-          this._fightTimers.spawn = 0.5 + Math.random() * 0.5; // Fire freq
-          
-          var candidates = [];
-          
-          // 1. Valid Bricks
-          if (this.court && this.court.bricks) {
-              for (var i = 0; i < this.court.bricks.length; i++) {
-                  var b = this.court.bricks[i];
-                  // Only alive bricks that are ON SCREEN (below ceiling)
-                  if (!b.hit && b.y > this.court.top) {
-                      candidates.push(b);
-                  }
-              }
-          }
-          
-          // 2. Boss (Explicit Check)
-          if (this.court && this.court.boss && this.court.boss.active) {
-              candidates.push(this.court.boss);
-          }
-          
-          if (candidates.length > 0) {
-              var shooter = candidates[Math.floor(Math.random() * candidates.length)];
-              
-              // CALCULATE PIXEL COORDS
-              var sx = shooter.x + shooter.w/2;
-              var sy = shooter.y + shooter.h;
+    // Clean timers for dead bricks
+    for (let k in this._fightTimers) {
+      if (!Object.prototype.hasOwnProperty.call(this._fightTimers, k)) continue;
+      // If no brick with this uid exists anymore, drop its timer.
+      var found = false;
+      for (let i = 0; i < c.bricks.length && !found; i++) {
+        var b = c.bricks[i];
+        if (b && !b.hit && b._uid == k) found = true;
+      }
+      if (!found) delete this._fightTimers[k];
+    }
+    // Ensure all current live bricks have a uid & a timer.
+    for (let i = 0; i < c.bricks.length; i++) {
+      var br = c.bricks[i];
+      if (!br || br.hit) continue;
+      if (!br._uid) br._uid = (this._brickUIDSeq = (this._brickUIDSeq || 1) + 1);
+      if (this._fightTimers[br._uid] == null) {
+        this._fightTimers[br._uid] = now + (800 + Math.random() * 2000) | 0;
+      }
+    }
+    // If we're already at capacity, just return (timers remain scheduled).
+    if (this.fightLasers.length >= maxBeams) return;
+    // Try to spawn from bricks whose cooldown elapsed. Shuffle order a bit so
+    // the same brick doesn't always win the check first.
+    var idxs = [];
+    for (let j = 0; j < c.bricks.length; j++) idxs.push(j);
+    for (let s = idxs.length - 1; s > 0; s--) { // Fisher-Yates
+      var r = (Math.random() * (s + 1)) | 0;
+      var tmp = idxs[s];
+      idxs[s] = idxs[r];
+      idxs[r] = tmp;
+    }
+    for (let p = 0; p < idxs.length; p++) {
+      if (this.fightLasers.length >= maxBeams) break;
+      var br = c.bricks[idxs[p]];
+      if (!br || br.hit) continue;
 
-              // SANITY CHECK: Is the shooter actually valid?
-              // 1. Is it a number?
-              // 2. Is it below the ceiling (Court Top)? This fixes the "Vents" bug.
-              if (isFinite(sx) && isFinite(sy) && sy > this.court.top) {
-                  this.fightLasers.push({ 
-                      x: sx, y: sy, w: 4, h: 15, vy: 250, color: '#FF0000' 
-                  });
-                  if (this.playSound) this.playSound('lasers');
-              }
-          }
+      var uid = br._uid;
+      var fireAt = this._fightTimers[uid] || 0;
+      if (now < fireAt) continue;
+
+      // Spawn a straight-down beam from the brick's center bottom.
+      var bx = (br.left + br.right) * 0.5;
+      var by = br.bottom;
+
+      this.fightLasers.push({
+        x: bx,
+        y: by,
+        vy: Math.max(300, c.chunk * 16), // beam speed
+        w: Math.max(2, (c.chunk * 0.18) | 0),
+        h: Math.max(10, (c.chunk * 0.8) | 0),
+        life: 0,
+        maxLife: 3.5, // seconds (for fallback cleanup)
+        color: '#ff3b3b'
+      });
+
+      // Reschedule this brick’s next shot with some jitter.
+      var cooldown = 900 + Math.random() * 2000; // 0.9 – 2.9s
+      this._fightTimers[uid] = now + cooldown | 0;
+    }
+  },
+  updateFightLasers: function (dt) {
+    // Move beams, check paddle hit, clean up off-court / expired.
+    if (!this.fightLasers) return;
+    var c = this.court,
+      P = this.paddle,
+      snd = this.playSound && this.playSound.bind(this);
+
+    for (let i = this.fightLasers.length - 1; i >= 0; i--) {
+      var L = this.fightLasers[i];
+      L.y += L.vy * dt;
+      L.life += dt;
+
+      // Paddle collision (simple AABB vs thin rect)
+      if (P && L.y + L.h >= P.top && L.y <= P.bottom && L.x >= P.left && L.x <= P.right) {
+        // Damage: shrink paddle smoothly to half size
+        P.smoothResizeTo((this.paddleBaseW || 96) * 0.5, 220);
+
+        // FX: ripple + shake + sound
+        if (this.ripple) {
+          this.ripple.t = 0;
+          this.ripple.dur = 0.35;
+          this.ripple.cx = L.x;
+          this.ripple.cy = P.top;
+          this.ripple.r = 0;
+          this.ripple.max = this.court.chunk * 4;
+        }
+        if (this.shake) {
+          this.shake.t = 0.18; // duration
+          this.shake.dur = 0.18;
+          this.shake.mag = 5; // magnitude
+        }
+        if (snd) snd('damage');
+
+        // Remove beam on impact
+        this.fightLasers.splice(i, 1);
+        continue;
       }
 
-      // --- UPDATE LOGIC ---
-      for (var i = this.fightLasers.length - 1; i >= 0; i--) {
-          var l = this.fightLasers[i];
-          l.y += l.vy * dt;
-          
-          // Hit Paddle?
-          if (l.y > this.paddle.y - this.paddle.h/2 && l.y < this.paddle.y + this.paddle.h/2) {
-              if (l.x > this.paddle.x - this.paddle.w/2 && l.x < this.paddle.x + this.paddle.w/2) {
-                  
-                  // Safe Call to Damage
-                  if (this.damagePaddle) this.damagePaddle();
-                  
-                  this.fightLasers.splice(i, 1);
-                  continue;
-              }
-          }
-          
-          // Off Screen?
-          if (l.y > this.height) {
-              this.fightLasers.splice(i, 1);
-          }
+      // Off-court or timed out
+      if (L.y > c.bottom + 6 || L.life > L.maxLife) {
+        this.fightLasers.splice(i, 1);
       }
-  }, 
+    }
+  },
   updateFightback: function (dt) {
     // Only run when active
     if (!this.endGame || this.endGame.mode !== 'fightback') return;
+    this._updateFightbackSpawn(dt);
     this.updateFightLasers(dt);
   },
   drawFightLasers: function (ctx) {
@@ -3842,92 +4485,61 @@ window.Breakout = {
     }
     ctx.restore();
   },
-  damagePaddle: function() {
-      // Define limits
-      var minWidth = 40; // Hardcoded safety minimum
-      if (this.cfg && this.cfg.paddleSize) minWidth = this.cfg.paddleSize * 0.5; // Or 50% of start size
-      
-      var shrinkAmount = 20; 
-      
-      if (this.paddle.w > minWidth) {
-          // Shrink
-          this.paddle.w -= shrinkAmount;
-          if (this.paddle.w < minWidth) this.paddle.w = minWidth;
-          
-          // Feedback
-          if (this.playSound) this.playSound('powerdown');
-          if (this.particles && this.particles.spawnHit) {
-              this.particles.spawnHit(this.paddle.x, this.paddle.y, '#FF0000');
-          }
-          
-      } else {
-          // Already at minimum: Die
-          // Try to find the correct death function
-          if (this.loseBall) {
-              this.loseBall(); 
-          } else if (this.onLoseBall) {
-              this.onLoseBall();
-          } else if (this.score && this.score.loseLife) {
-              // Fallback: Manually trigger death sequence
-              this.score.loseLife();
-              this.ball.reset();
-              this.state = 'ready'; // Pause game for launch
-          }
-      }
-  },
   draw: function (ctx) {
     ctx.save();
     if (ctx.setTransform) ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.width, this.height);
     ctx.restore();
 
-    // 1. ROTATION
+    // 1. ROTATION (End Game)
     var _rotApplied = this.beginRotateCanvas && this.beginRotateCanvas(ctx);
 
-    // 2. ZOOM LAYER
-    ctx.save(); 
+    // 2. ZOOM (Time Dilation)
+    // We apply this BEFORE drawing game elements, but AFTER clearing screen.
+    // We do NOT want to zoom the HUD/UI later.
+    ctx.save(); // Start Zoom Layer
+
     if (this.dilation && this.dilation.zoom > 1.0) {
       var s = this.dilation.zoom;
       var cx = this.dilation.focus.x;
       var cy = this.dilation.focus.y;
+
+      // Clamp focus point so we don't zoom into the void (keep viewport on screen)
+      // Viewport dimensions in game pixels
       var vw = this.width / s;
       var vh = this.height / s;
+
+      // Clamp X
       cx = Math.max(vw / 2, Math.min(this.width - vw / 2, cx));
+      // Clamp Y
       cy = Math.max(vh / 2, Math.min(this.height - vh / 2, cy));
+
+      // Apply Transform: Translate center to origin, scale, translate origin to center
       ctx.translate(this.width / 2, this.height / 2);
       ctx.scale(s, s);
       ctx.translate(-cx, -cy);
     }
 
-    // --- GAMEPLAY RENDERING ---
-    if (this.bg) this.bg.draw(ctx);
-
-    // Lasers (Behind Bricks)
-    if (this.endGame && this.endGame.mode === 'fightback' && this.drawFightLasers) {
-        this.drawFightLasers(ctx);
+    // --- GAMEPLAY RENDERING (Affected by Zoom) ---
+    if (this.endGame && this.endGame.mode === 'bumpers' && this.drawBumpers) {
+      this.drawBumpers(ctx);
     }
+    if (this.bg) this.bg.draw(ctx);
 
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
 
-    // Shake
+    // Shake effect
     ctx.save();
     if (this.shake) ctx.translate((this.shake.x || 0), (this.shake.y || 0));
 
-    // Court & Bricks
     this.court.draw(ctx);
-    
-    // Overlays
     this.drawGhostBricksOverlay(ctx);
     this.drawMirrorRipple(ctx);
-    
-    // Effects
-    if (this.endGame && this.endGame.mode === 'bumpers' && this.drawBumpers) this.drawBumpers(ctx);
     if (this.endGame && this.endGame.mode === 'spikes') this.drawSpikes(ctx);
     if (this.drawTimeDilation) this.drawTimeDilation(ctx);
     if (this.endGame && this.endGame.mode === 'ricochet') this.drawRicochet(ctx);
     this.drawOrbitals(ctx);
-    
     if (this.court && typeof this.court.drawBrickSweep === 'function') this.court.drawBrickSweep(ctx);
     this.drawTempFloor(ctx);
     this.drawRipple(ctx);
@@ -3935,37 +4547,47 @@ window.Breakout = {
     this.drawPortals(ctx);
 
     if (this.endGame && this.endGame.mode === 'lasers' && this.drawLaserGrid) this.drawLaserGrid(ctx);
+    if (this.endGame && this.endGame.mode === 'fightback' && this.drawFightLasers) this.drawFightLasers(ctx);
+    if (this.endGame && this.endGame.mode === 'bumpers' && this.drawBumpers) this.drawBumpers(ctx);
 
     this.particles.draw(ctx);
     this.floaters.draw(ctx);
-    
     this.paddle.draw(ctx);
     if (this.paddle && typeof this.paddle.drawSkin === 'function') this.paddle.drawSkin(ctx);
     this.ball.draw(ctx);
 
     if (this.suddenDeath && this.drawSuddenDeathVignette) this.drawSuddenDeathVignette(ctx);
 
-    this.drawLasers(ctx); 
+    this.drawLasers(ctx);
     this.powerup.draw(ctx);
     this.drawLightsOutMask(ctx);
 
     ctx.restore(); // End Shake
     ctx.restore(); // End Zoom Layer
 
-    // --- HUD & UI ---
+    // --- UI/HUD RENDERING (Static, unaffected by zoom/shake) ---
+    // Note: Rotation (_rotApplied) might still be active, usually we want HUD static relative to rotation too,
+    // but typically EndGame rotation spins the whole screen. We'll leave it as is or move endRotateCanvas up if you prefer HUD static.
+
     this.drawEffectsHUD(ctx);
-    if (this.achievements) this.achievements.drawHUD(ctx);
     this.drawComboHUD(ctx);
     this.score.draw(ctx);
 
+    // --- MENU/OVERLAYS ---
     if (this.is && this.is('menu')) {
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      var bw = Math.min(300, this.width * 0.5), bh = 44;
+      var bw = Math.min(300, this.width * 0.5),
+        bh = 44;
       const cx = this.width / 2;
       var by = Math.floor(this.height * 0.90);
-      this._ui.menu.leader = { x: cx - bw / 2, y: by - bh / 2, w: bw, h: bh };
+      this._ui.menu.leader = {
+        x: cx - bw / 2,
+        y: by - bh / 2,
+        w: bw,
+        h: bh
+      };
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       ctx.fillRect(this._ui.menu.leader.x, this._ui.menu.leader.y, bw, bh);
       ctx.strokeStyle = '#fff';
@@ -3982,43 +4604,46 @@ window.Breakout = {
     this.drawLeaderboardOverlay(ctx);
     this.drawHelpOverlay(ctx);
 
+    // Close Rotation if active
     if (this.endRotateCanvas) this.endRotateCanvas(ctx, _rotApplied);
 
+    // Full screen overlays (Game Over / Level Complete)
     if (this.gameoverOverlay && this.gameoverOverlay.show && this.gameoverOverlay.alpha > 0) {
-      // (Simplified draw for overlay)
       var img = this.gameoverOverlay.img;
-      var iw = img.naturalWidth || img.width; var ih = img.naturalHeight || img.height;
+      var iw = img.naturalWidth || img.width;
+      var ih = img.naturalHeight || img.height;
       if (iw && ih) {
         var scale = Math.min(this.width / iw, this.height / ih);
-        var dw = Math.floor(iw * scale), dh = Math.floor(ih * scale);
-        var dx = Math.floor((this.width - dw) / 2), dy = Math.floor((this.height - dh) / 2);
-        ctx.save(); ctx.globalAlpha = this.gameoverOverlay.alpha; ctx.drawImage(img, dx, dy, dw, dh); ctx.restore();
+        var dw = Math.floor(iw * scale);
+        var dh = Math.floor(ih * scale);
+        var dx = Math.floor((this.width - dw) / 2);
+        var dy = Math.floor((this.height - dh) / 2);
+        ctx.save();
+        ctx.globalAlpha = this.gameoverOverlay.alpha;
+        ctx.drawImage(img, dx, dy, dw, dh);
+        ctx.restore();
       }
     }
     if (this.levelOverlay && this.levelOverlay.show && this.levelOverlay.alpha > 0) {
       var img2 = this.levelOverlay.img;
-      var iw2 = img2.naturalWidth || img2.width; var ih2 = img2.naturalHeight || img2.height;
+      var iw2 = img2.naturalWidth || img2.width;
+      var ih2 = img2.naturalHeight || img2.height;
       if (iw2 && ih2) {
         var scale2 = this.width / iw2;
-        var dw2 = Math.floor(iw2 * scale2), dh2 = Math.floor(ih2 * scale2);
-        var dx2 = 0, dy2 = Math.floor((this.height - dh2) / 2);
-        ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, this.levelOverlay.alpha)); ctx.drawImage(img2, dx2, dy2, dw2, dh2); ctx.restore();
+        var dw2 = Math.floor(iw2 * scale2);
+        var dh2 = Math.floor(ih2 * scale2);
+        var dx2 = 0;
+        var dy2 = Math.floor((this.height - dh2) / 2);
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, this.levelOverlay.alpha));
+        ctx.drawImage(img2, dx2, dy2, dw2, dh2);
+        ctx.restore();
       }
     }
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
 
     if (this.bg && this.bg.drawCRTOverlay) this.bg.drawCRTOverlay(ctx);
-
-    // --- FPS DISPLAY (Top Left) ---
-    ctx.save();
-    ctx.fillStyle = '#00FF00';
-    ctx.font = 'bold 12px monospace';
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'left';
-    ctx.shadowBlur = 0;
-    ctx.fillText("FPS: " + (this.currentFps || 60), 5, 5);
-    ctx.restore();
   },
   onresize: function (width, height) {
     if (this.bg && this.bg.resize) this.bg.resize(width, height);
@@ -4235,6 +4860,7 @@ window.Breakout = {
     this.portalsUntil = 0;
     this.portalsSpawned = false;
 
+    // FIX: Retrieve the actual sound object for the beat conductor
     if (this.beatConductor) {
       var bgmObject = (typeof soundManager !== 'undefined') ? soundManager.getSoundById('bgm') : null;
       if (bgmObject) {
@@ -4260,12 +4886,14 @@ window.Breakout = {
     try {
       Breakout.HighScores.checkAndSubmit(pts, 20).finally(function () {
         // Only show the overlay AFTER the high score flow finishes (or is skipped)
+        console.log('[HS] showGameOverOverlay now');
         self.showGameOverOverlay();
       });
     } catch (e) {
       try {
         console.warn('[HS] onlose check error', e);
       } catch (_e) {}
+      console.log('[HS] showGameOverOverlay now');
       self.showGameOverOverlay();
     }
   },
@@ -4285,8 +4913,6 @@ window.Breakout = {
     return this.runner.confirm("Abandon game?");
   },
   loseBall: function () {
-    this._levelDeaths = (this._levelDeaths || 0) + 1;
-    if (this.achievements) this.achievements.onDeath();
     if (this.game && this.game.comboReset) this.game.comboReset();
     this.powerup.resetPowerups();
     this.playSound('loselife');
@@ -4307,16 +4933,6 @@ window.Breakout = {
     }
     if (this.playSound) this.playSound('thud');
     if (this.requestShake) this.requestShake(8, 0.08);
-    if (this.achievements) {
-        var lvl = Breakout.Levels[this.level];
-        // Calculate deaths in this level (Current total - deaths at start of level)
-        // We need to track deathsAtLevelStart. 
-        // Simple Hack: Check if score.lives == max? No.
-        // Let's just pass 0 for now unless we add per-level stats tracking.
-        // Actually, let's track it in startLevel.
-        var deaths = (this._levelDeaths || 0); 
-        this.achievements.onWinLevel(lvl.name, this.theme, this.endGame.mode, deaths);
-    }
     this.playSound('levelup');
     this.score.gainLife();
     if (this.levelOverlay) {
@@ -4460,35 +5076,6 @@ window.Breakout = {
     var bw = Math.max(4, center.right - center.left);
     var bh = Math.max(4, center.bottom - center.top);
 
-    // CHECK BOSS COLLISION ---
-    if (this.court.boss && this.court.boss.active) {
-        var b = this.court.boss;
-        
-        // Calculate Explosion "Hit Box" (Approx 3x3 brick area centered on hit)
-        // We expand the center brick by 1 brick width/height in all directions
-        var expLeft = cx - bw * 1.5;
-        var expRight = cx + bw * 1.5;
-        var expTop = cy - bh * 1.5;
-        var expBottom = cy + bh * 1.5;
-
-        // AABB Overlap Check (Explosion vs Boss)
-        if (expRight > b.x && expLeft < b.x + b.w &&
-            expBottom > b.y && expTop < b.y + b.h) {
-            
-            // Apply Explosion Damage to Boss
-            // Check for PowerSmash multiplier if you want extra damage
-            var dmg = 5; 
-            if (this.powerup && this.powerup.isPowerSmashActive && this.powerup.isPowerSmashActive()) {
-                dmg = 10; // Double damage for PowerSmash Explosions
-            }
-            
-            this.court.damageBoss(dmg);
-            
-            // Visual Flair
-            if (this.particles) this.particles.spawnHit(cx, cy, '#FF4500');
-        }
-    }
-
     // Collect the 8 neighbors
     var neighbors = [];
     for (let i = 0; i < this.court.bricks.length; i++) {
@@ -4531,7 +5118,7 @@ window.Breakout = {
       });
     }
 
-    // Play Explosion Sound
+    // NEW: Play Explosion Sound
     if (this.playSound) this.playSound('explosion');
     if (this.requestShake) this.requestShake(7, 0.11);
   },
@@ -4539,78 +5126,33 @@ window.Breakout = {
   resetLevel: function () {
     this.setLevel();
   },
-  getStageInfo: function(stageIdx) {  
-    // 1. Check for Boss (Every 5th slot: 5, 10, 15...)
-    if ((stageIdx + 1) % 5 === 0) {
-        var bossCount = Math.floor((stageIdx + 1) / 5);
-        var themes = ['synthwave', 'city', 'space', 'forest', 'circuit'];
-        return {
-            type: 'boss',
-            theme: themes[(bossCount - 1) % themes.length],
-            bossIndex: bossCount,
-            name: "Boss Battle"
-        };
-    }
-    
-    // 2. Calculate Layout Index
-    var bossesPassed = Math.floor((stageIdx + 1) / 5);
-    var layoutIdx = stageIdx - bossesPassed;
-    
-    // 3. Cycle correctly if we run out of levels
-    var numLevels = Breakout.Levels.length;
-    if (numLevels > 0) {
-        layoutIdx = layoutIdx % numLevels;
-    } else {
-        layoutIdx = 0;
-    }
-    
-    var layout = Breakout.Levels[layoutIdx];
-    
-    // Safety check
-    if (!layout) return { type: 'level', name: "Unknown Level", layout: null, theme: 'synthwave' };
-
-    return {
-        type: 'level',
-        layoutIndex: layoutIdx,
-        layout: layout,
-        name: layout.name,
-        theme: layout.theme
-    };
-  },
   setLevel: function (level) {
-    this.endGame = { chosen: false, mode: null };
+    // reset end-game challenge each level
+    this.endGame = {
+      chosen: false,
+      mode: null
+    };
     this.bumpers = [];
     this.shuffleActive = false;
-    this.suddenDeath = false;
-    this.laserGrid = { lines: [], t: 0, on: true }; 
-    this.spikes = null;
-    this.fightLasers = [];
-    this._fightTimers = null;
-    this.mirror = { next: 3.0 + Math.random(), ripple: 0 };
-    this.ghosts = { t: 0, phase: 0, solid: true };
-    this.ricochet = null;
-    this.timeDilation = null;
 
     level = (typeof level == 'undefined') ? (this.storage.level ? parseInt(this.storage.level) : 0) : level;
-    
+    level = level < Breakout.Levels.length ? level : 0;
     this.court.reset(level);
     this.storage.level = this.level = level;
-    
-    var info = this.getStageInfo(level);
-    // Force the game to display "Boss Battle" or the actual level name
-    this.determineLevelName = function() { return info.name; };
-    this.levelName = info.name;
-    
+    this.determineLevelName();
+    this.theme = this.determineLevelTheme();
     if (this.bg && this.bg.setTheme) {
-        if (this.bg.buildLayers) this.bg.buildLayers();
+      this.bg.setTheme(this.theme); // <--- FIX: Call a theme setting function on the BG
+      if (this.bg && this.bg.buildLayers) this.bg.buildLayers();
     }
     if (this.theme === 'circuit') {
       this.bg.crt.vignetteAlpha = 0.22;
       this.bg.crt.lineAlpha = 0.08;
-      this.bg.crt.spacing = 2; 
-      this.bg.crt.rgbGlow = true; 
+      this.bg.crt.spacing = 2; // 2 = dense, 3 = sparser
+      this.bg.crt.rgbGlow = true; // set true if you like the glow look
     }
     this.powerup.resetPowerups();
+    this.refreshDOM();
   },
   canPrevLevel: function () {
     return this.is('menu') && (this.level > 0);
@@ -4618,23 +5160,11 @@ window.Breakout = {
   canNextLevel: function () {
     return this.is('menu') && (this.level < (Breakout.Levels.length - 1));
   },
-  prevLevel: function () {
-    var current = parseInt(this.level) || 0;
-    var next = current - 1;
-    if (next < 0) next = 0; 
-    
-    if (next !== current) {
-        this.setLevel(next);
-		this.refreshDOM();
-    }
+  prevLevel: function (force) {
+    if (force || this.canPrevLevel()) this.setLevel(this.level - 1);
   },
-
-  nextLevel: function () {
-    var current = parseInt(this.level) || 0;
-    var next = current + 1;
-    // Infinite scrolling enabled (Bosses generated forever)
-    this.setLevel(next);
-	this.refreshDOM();
+  nextLevel: function (force) {
+    if (force || this.canNextLevel()) this.setLevel(this.level + 1);
   },
   determineLevelName: function () {
     if (this.level) this.setLevelName(Breakout.Levels[this.storage.level].name);
@@ -4703,60 +5233,22 @@ window.Breakout = {
     this.score.measure(ctx);
   },
   refreshDOM: function () {
-    var instructions = document.getElementById('instructions');
-    var labelDiv = document.getElementById('labelDiv');
-    var prev = document.getElementById('prev');
-    var next = document.getElementById('next');
-    var levelEl = document.getElementById('level');
-    var soundEl = document.getElementById('sound');
-    var selector = document.getElementById('levels');
+    var instructions = $('instructions');
+    var labelDiv = $('labelDiv'); // Get the title overlay
 
-    // Force Integer
-    this.level = parseInt(this.level) || 0;
+    instructions.className = Game.ua.hasTouch ? 'touch' : 'keyboard';
 
-    // 1. Get Stage Info
-    var info = this.getStageInfo(this.level);
-
-    // 2. Update Text (Title & Number) - DO THIS FIRST
-    if (levelEl) levelEl.innerHTML = (this.level + 1);
-    
     if (this.is('menu')) {
-      if (instructions) { instructions.style.display = 'block'; instructions.style.opacity = 1; }
-      if (labelDiv) {
-          labelDiv.style.opacity = 1;
-          labelDiv.innerHTML = info.name; 
-      }
+      instructions.style.display = 'block';
+      if (labelDiv) labelDiv.style.opacity = 1; // Show title in menu
     } else {
-      if (instructions) instructions.style.display = 'none';
-      if (labelDiv) labelDiv.style.opacity = 0;
+      instructions.style.display = 'none';
+      if (labelDiv) labelDiv.style.opacity = 0; // Hide title during game
     }
-
-    // 3. Update Buttons
-    if (prev) {
-        if (this.level > 0) prev.classList.remove('disabled');
-        else prev.classList.add('disabled');
-    }
-    if (next) next.classList.remove('disabled');
-
-    // 4. Update Dropdown (Wrapped in try/catch to prevent crashing HUD)
-    try {
-        if (selector && selector.tagName === 'SELECT') {
-            var len = selector.options.length;
-            // If current level is outside dropdown range, add it dynamically
-            if (this.level >= len) {
-                 var opt = document.createElement('option');
-                 opt.value = this.level;
-                 opt.innerHTML = (this.level + 1) + ": " + info.name;
-                 selector.appendChild(opt);
-            }
-            selector.value = this.level;
-        }
-    } catch(e) {
-        console.error("Error updating dropdown:", e);
-    }
-
-    // 5. Update Sound
-    if (soundEl) soundEl.checked = this.sound;
+    $('prev').toggleClassName('disabled', !this.canPrevLevel());
+    $('next').toggleClassName('disabled', !this.canNextLevel());
+    $('level').update(this.level + 1);
+    $('sound').checked = this.sound;
   },
   playSound: function (id) {
     if (window.soundManager && this.sound) soundManager.play(id);
@@ -5007,7 +5499,6 @@ window.Breakout = {
       let centerX = brick.x + brick.w / 2;
       let centerY = brick.y + brick.h / 2;
       let types = ['Score100', 'Score250', 'Score500', 'Score750', 'Score1000', 'BigPaddle', 'SmallPaddle', 'ExtraLife', 'Fireball', 'Tripleball', 'BigBall', 'SmallBall', 'FastBall', 'SlowBall', 'StickyPaddle', 'Confused', 'Lasers', 'SplitPaddle', 'Chaos', 'Exploding', 'Floor', 'Frozen', 'LightsOut', 'Ghost', 'Magnet', 'Reset', 'Time-Add', 'Orbitals', 'Lightning', 'XFactor', 'PowerSmash'];
-	  //let types = ['BigPaddle', 'ExtraLife', 'Fireball', 'Tripleball', 'BigBall', 'FastBall', 'StickyPaddle', 'Lasers', 'Exploding', 'Floor', 'Magnet', 'Time-Add', 'Orbitals', 'Lightning', 'XFactor']; // when testing only good powerups
       let type = types[Math.floor(Math.random() * types.length)];
       this.drops.push({
         type: type,
@@ -5727,261 +6218,6 @@ window.Breakout = {
     endChaos: function () {
       this.chaosUntil = 0; // Kill timer
     },
-    spawn: function(x, y) {
-        // Determine if we should drop a powerup
-        if (Math.random() > 0.8) return; // 20% chance, or use your config
-        
-        // Logic to create a powerup capsule
-        // This relies on your existing capsule structure. 
-        // If you don't have one, we need to create the basic 'capsules' array.
-        if (!this.capsules) this.capsules = [];
-        
-        var types = ['L', 'F', 'S', 'B', 'G']; // Laser, Fire, Slow, Big, Green
-        var type = types[Math.floor(Math.random() * types.length)];
-        
-        this.capsules.push({
-            x: x, y: y, type: type, vy: 100, active: true
-        });
-    },
-  },
-  //=============================================================================
-  // Achievements
-  //=============================================================================
-  Achievements: {
-    initialize: function(game) {
-      this.game = game;
-      this.unlocked = {}; 
-      this.session = {
-        levelsBeat: 0,
-        deaths: 0,
-        themes: {},
-        endModes: {}
-      };
-      
-      this.defs = {
-        'bumper_stumper': { title: "Bumper Stumper", desc: "Beat a level with Bumpers" },
-        'laser_guided':   { title: "Laser Guided",   desc: "Beat a level with Laser Grid" },
-        'under_wire':     { title: "Under the Wire", desc: "Beat a level with Sudden Death" },
-        'mirror_image':   { title: "Mirror Image",   desc: "Beat a level with Mirror World" },
-        'ghost_buster':   { title: "Ghost Buster",   desc: "Beat a level with Ghost Bricks" },
-        'perf_spike':     { title: "Performance Spike", desc: "Beat a level with Spikes" },
-        'ricochet_2':     { title: "Valve's Ricochet 2", desc: "Beat a level with Ricochet" },
-        'pivot':          { title: "Pivot, Pivot!",  desc: "Beat a level with Rotate" },
-        'dont_get_shot':  { title: "Don't Get Shot", desc: "Beat a level with Fight Back" },
-        'immunized':      { title: "Immunized",      desc: "Beat a level with Virus Outbreak" },
-        'flawless':       { title: "Flawless Victory", desc: "Beat a level without dying" },
-        'dark_souls':     { title: "Dark Souls Is Next", desc: "Beat every challenge type (Lifetime)" },
-        'boss_synth':     { title: "Neon Rider Grounded", desc: "Defeated the Synthwave Boss" },
-        'boss_city':      { title: "Wrecking Crew Wrecked", desc: "Defeated the City Boss" },
-        'boss_space':     { title: "Mothership Down", desc: "Defeated the Space Boss" },
-        'boss_forest':    { title: "Dragon Slayer", desc: "Defeated the Forest Boss" },
-        'boss_circuit':   { title: "De-Rezzed", desc: "Defeated the Master Control Program" },
-        'i_feel_good':    { title: "I Feel Good!",   desc: "5 good power-ups at once" },
-        'dont_feel_good': { title: "Don't Feel So Good", desc: "5 bad power-ups at once" },
-        'travel_world':   { title: "Travel the World", desc: "Beat every theme in one session" },
-        'impressive':     { title: "Impressive.",    desc: "Complete 10 levels in one session" },
-        'more_levels':    { title: "Got Any More Levels?", desc: "Beat 50 unique levels (Lifetime)" },
-        'all_day':        { title: "I Can Do This All Day", desc: "Die 10 times in one session" },
-        'childs_play':    { title: "This is Child's Play", desc: "Beat every challenge in one session" },
-        'look_at_me':     { title: "Look At Me Now", desc: "Get a High Score" },
-        'cheat':          { title: "Cheat",          desc: "Konami Code entered" },
-      };
-
-      this.load();
-      this.setupKonami();
-    },
-
-    load: function() {
-      try {
-        var raw = localStorage.getItem('breakout_achievements_v1');
-        if (raw) {
-            var data = JSON.parse(raw);
-            this.unlocked = data.unlocked || {};
-            // Lifetime tracking
-            this.lifetimeModes = data.lifetimeModes || {}; 
-            this.lifetimeLevels = data.lifetimeLevels || {};
-        } else {
-            this.lifetimeModes = {};
-            this.lifetimeLevels = {};
-        }
-      } catch(e) { this.unlocked = {}; }
-    },
-
-    save: function() {
-      try {
-        var data = {
-            unlocked: this.unlocked,
-            lifetimeModes: this.lifetimeModes,
-            lifetimeLevels: this.lifetimeLevels
-        };
-        localStorage.setItem('breakout_achievements_v1', JSON.stringify(data));
-      } catch(e) {}
-    },
-
-    unlock: function(key) {
-      if (this.unlocked[key]) return;
-      if (!this.defs[key]) return;
-
-      this.unlocked[key] = Date.now();
-      this.save();
-
-      // Feedback
-      if (this.game.playSound) this.game.playSound('achievement');
-      if (this.game.floaters) {
-          // Center screen pop-up
-          this.game.floaters.spawn(
-              this.game.width/2, this.game.height/2, 
-              "🏆 " + this.defs[key].title, 
-              '#FFD700'
-          );
-      }
-    },
-
-    // --- Hooks ---
-
-    onWinLevel: function(levelName, theme, endMode, deathsInLevel) {
-        this.session.levelsBeat++;
-        this.lifetimeLevels[levelName] = true;
-
-        // Theme tracking
-        if (theme) this.session.themes[theme] = true;
-
-        // Mode tracking
-        if (endMode) {
-            this.session.endModes[endMode] = true;
-            this.lifetimeModes[endMode] = true;
-            
-            // Mode specifics
-            var map = {
-                'bumpers': 'bumper_stumper',
-                'lasers': 'laser_guided',
-                'sudden': 'under_wire',
-                'mirror': 'mirror_image',
-                'ghosts': 'ghost_buster',
-                'spikes': 'perf_spike',
-                'ricochet': 'ricochet_2',
-                'rotate': 'pivot',
-                'fightback': 'dont_get_shot',
-                'virus': 'immunized'
-            };
-            if (map[endMode]) this.unlock(map[endMode]);
-        }
-
-        // Flawless
-        if (deathsInLevel === 0) this.unlock('flawless');
-
-        // Quantity Checks
-        if (this.session.levelsBeat >= 10) this.unlock('impressive');
-        if (Object.keys(this.lifetimeLevels).length >= 50) this.unlock('more_levels');
-        
-        // Collection Checks
-        var allThemes = ['synthwave','city','space','forest','circuit'];
-        var hasAllThemes = true;
-        for(var t of allThemes) if(!this.session.themes[t]) hasAllThemes = false;
-        if (hasAllThemes) this.unlock('travel_world');
-
-        //var allModes = ['bumpers','lasers','sudden','mirror','ghosts','spikes','ricochet','rotate','fightback','virus'];
-		var allModes = ['fightback'];
-        
-        // Session Modes
-        var hasAllModesSession = true;
-        for(var m of allModes) if(!this.session.endModes[m]) hasAllModesSession = false;
-        if (hasAllModesSession) this.unlock('childs_play');
-
-        // Lifetime Modes
-        var hasAllModesLife = true;
-        for(var m of allModes) if(!this.lifetimeModes[m]) hasAllModesLife = false;
-        if (hasAllModesLife) this.unlock('dark_souls');
-        
-        this.save();
-    },
-
-    onDeath: function() {
-        this.session.deaths++;
-        if (this.session.deaths >= 10) this.unlock('all_day');
-    },
-
-    checkPowerups: function(activeList) {
-        var good = 0, bad = 0;
-        // Simple heuristic based on known IDs
-        var bads = ['SmallPaddle','SmallBall','SlowBall','Confused','Chaos','Frozen','LightsOut','Ghost','Sudden','Spikes','Virus'];
-        
-        for (var k in activeList) {
-            if (activeList[k]) {
-                // If the key contains any "Bad" keyword or is in list
-                var isBad = false;
-                for(var b of bads) if(k.indexOf(b) >= 0) isBad = true;
-                if(isBad) bad++; else good++;
-            }
-        }
-        
-        if (good >= 5) this.unlock('i_feel_good');
-        if (bad >= 5) this.unlock('dont_feel_good');
-    },
-
-    setupKonami: function() {
-        var code = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
-        var idx = 0;
-        var self = this;
-        document.addEventListener('keydown', function(e) {
-            if (e.keyCode === code[idx]) {
-                idx++;
-                if (idx === code.length) {
-                    self.unlock('cheat');
-                    idx = 0;
-                }
-            } else {
-                idx = 0;
-            }
-        });
-    },
-
-    drawHUD: function(ctx) {
-        if (!this.game || !this.game.court) return;
-        
-        var keys = Object.keys(this.unlocked);
-        if (keys.length === 0) return;
-
-        // Sort by unlock time (newest first? or fixed order? let's do newest first)
-        var self = this;
-        keys.sort(function(a,b){ return self.unlocked[b] - self.unlocked[a]; });
-
-        const c = this.game.court;
-        var x = 10;
-        var y = c.top + c.chunk * 2.5; 
-        
-        var fontSize = Math.max(10, Math.floor(c.chunk * 0.40));
-        var rowH = Math.floor(fontSize * 1.5);
-
-        ctx.save();
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.font = 'bold ' + fontSize + 'px Orbitron, sans-serif';
-
-        // Draw Header
-        ctx.fillStyle = '#FFD700'; // Gold
-        ctx.fillText("ACHIEVEMENTS", x, y);
-        y += rowH;
-
-        // Draw List (Limit to 10 most recent to save space?)
-        for (let i = 0; i < Math.min(10, keys.length); i++) {
-            var k = keys[i];
-            var def = this.defs[k];
-            if (!def) continue;
-
-            // Text Shadow
-            ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-            ctx.lineWidth = 3;
-            ctx.strokeText("★ " + def.title, x, y);
-
-            // Text
-            ctx.fillStyle = '#fff';
-            ctx.fillText("★ " + def.title, x, y);
-            
-            y += rowH;
-        }
-        ctx.restore();
-    }
   },
   //=============================================================================
   // Score
@@ -6006,16 +6242,10 @@ window.Breakout = {
       this.rerender = true;
     },
     format: function (n) {
-      if (isNaN(n)) n = 0;
-	  return ("0000000" + n).slice(-7);
+      return ("0000000" + n).slice(-7);
     },
     load: function () {
-      var stored = parseInt(this.game.storage.highscore);
-      if (!isFinite(stored) || isNaN(stored)) {
-          this.highscore = 1337;
-      } else {
-          this.highscore = stored;
-      }
+      this.highscore = this.game.storage.highscore ? parseInt(this.game.storage.highscore) : 1337;
     },
     save: function () {
       if (this.score > this.highscore) this.game.storage.highscore = this.highscore = this.score;
@@ -6106,20 +6336,24 @@ window.Breakout = {
       this.brickCache = {};
       this.bricks = [];
       this.numbricks = 0;
+      this.virusTimer = 0;
       this.lightningBolts = [];
       this.xFactorBolts = [];
-      this.vent = { active: false, state: 'closed', x: 0, w: 0, timer: 0, cooldown: 5 };
-      this.pistons = [];
+      // --- DYNAMIC HAZARDS ---
+      this.vent = {
+        active: false,
+        state: 'closed', // closed, warning, open
+        x: 0,
+        w: 0,
+        timer: 0,
+        cooldown: 5
+      };
+
+      this.pistons = []; // { side:'left'/'right', y, w, h, state, timer }
       this.pistonCooldown = 8;
-      this.boss = null;
-      this.virusTimer = 0;
     },
-
     update: function (dt) {
-      // 1. BOSS LOGIC
-      if (this.boss) this.updateBoss(dt);
-
-      // 2. Animation Logic (Float In)
+      // 1. Animation Logic (Float In)
       for (var i = 0; i < this.bricks.length; i++) {
         var b = this.bricks[i];
         if (b.anim) {
@@ -6131,6 +6365,8 @@ window.Breakout = {
           b.x = b.anim.x0 + (b.anim.x1 - b.anim.x0) * e;
           b.y = b.anim.y0 + (b.anim.y1 - b.anim.y0) * e;
 
+          // FIX: Synchronize Collision Box immediately
+          // This ensures the physics engine knows where the brick is right now
           if (typeof Game !== 'undefined' && Game.Math && Game.Math.bound) {
             Game.Math.bound(b);
           } else {
@@ -6145,15 +6381,15 @@ window.Breakout = {
         }
       }
 
-      // 3. Shuffle Logic
+      // 2. Shuffle Logic
       if (this.shuffleActive) {
-        this.shuffleTimer = (this.shuffleTimer || 0) + dt;
+        if (!this.shuffleTimer) this.shuffleTimer = 0;
         if (!this.shuffleCooldown) this.shuffleCooldown = 0;
 
         this.shuffleTimer += dt;
         if (this.shuffleCooldown > 0) this.shuffleCooldown -= dt;
 
-        if (this.shuffleTimer > 1.5 && (!this.shuffleCooldown || this.shuffleCooldown <= 0)) {
+        if (this.shuffleTimer > 1.5 && this.shuffleCooldown <= 0) {
           if (this.randomlyRelocateOne()) {
             this.shuffleTimer = 0;
             this.shuffleCooldown = 0.5;
@@ -6163,7 +6399,7 @@ window.Breakout = {
         }
       }
 
-      // 4. Lightning Bolt Decay
+      // 3. Lightning Bolt Decay
       if (this.lightningBolts.length > 0) {
         for (var i = this.lightningBolts.length - 1; i >= 0; i--) {
           this.lightningBolts[i].life -= dt;
@@ -6171,7 +6407,7 @@ window.Breakout = {
         }
       }
 
-      // 5. Virus Logic
+      // 4. Virus Logic
       if (this.game.endGame && this.game.endGame.mode === 'virus') {
         var survivors = [];
         var virusActive = false;
@@ -6185,7 +6421,7 @@ window.Breakout = {
 
         if (survivors.length > 0 && !virusActive) {
           var patientZero = survivors[Math.floor(Math.random() * survivors.length)];
-          if (this.makeVirus) this.makeVirus(patientZero);
+          this.makeVirus(patientZero);
           if (this.game && this.game.playSound) this.game.playSound('powerup');
         }
 
@@ -6193,143 +6429,100 @@ window.Breakout = {
           this.virusTimer += dt;
           if (this.virusTimer > 5.0) {
             this.virusTimer = 0;
-            if (this.spreadVirus) this.spreadVirus();
+            this.spreadVirus();
           }
         }
       }
 
-      // 6. X-Factor Bolt Decay
+      // 5. X-Factor Bolt Decay
       if (this.xFactorBolts.length > 0) {
         for (var i = this.xFactorBolts.length - 1; i >= 0; i--) {
           this.xFactorBolts[i].life -= dt;
           if (this.xFactorBolts[i].life <= 0) this.xFactorBolts.splice(i, 1);
         }
       }
-
-      // HAZARDS
-      this.updateHazards(dt);
-	},
-
-    updateHazards: function(dt) {
-      // Vent logic
+      // A. CEILING VENT (Opens to let ball escape)
       this.vent.timer -= dt;
       if (this.vent.state === 'closed') {
-          if (this.vent.timer <= 0) {
-              this.vent.state = 'warning'; this.vent.timer = 2.0; 
-              this.vent.w = this.chunk * 4;
-              this.vent.x = this.left + Math.random() * (this.width - this.vent.w);
-              //if (this.game.playSound) this.game.playSound('comeon');
-          }
+        if (this.vent.timer <= 0) {
+          // Start Warning
+          this.vent.state = 'warning';
+          this.vent.timer = 2.0; // 2s warning
+          // Pick random spot
+          this.vent.w = this.chunk * 4;
+          this.vent.x = this.left + Math.random() * (this.width - this.vent.w);
+          if (this.game.playSound) this.game.playSound('comeon');
+        }
       } else if (this.vent.state === 'warning') {
-          if (this.vent.timer <= 0) {
-              this.vent.state = 'open'; this.vent.timer = 4.0; 
-              if (this.game.playSound) this.game.playSound('thaw');
-          }
+        if (this.vent.timer <= 0) {
+          // OPEN!
+          this.vent.state = 'open';
+          this.vent.timer = 4.0; // Stay open for 4s
+          if (this.game.playSound) this.game.playSound('thaw');
+        }
       } else if (this.vent.state === 'open') {
-          if (this.vent.timer <= 0) {
-              this.vent.state = 'closed'; this.vent.timer = 10 + Math.random() * 10; 
-          }
+        if (this.vent.timer <= 0) {
+          this.vent.state = 'closed';
+          this.vent.timer = 10 + Math.random() * 10; // Cooldown
+        }
       }
 
-      // Piston Logic
+      // B. SIDE PISTONS (Slide out to block)
       if (this.pistonCooldown > 0) this.pistonCooldown -= dt;
       else {
-          if (this.pistons.length < 2) {
-              var side = Math.random() > 0.5 ? 'left' : 'right';
-              var py = this.top + 100 + Math.random() * (this.height - 300);
-              this.pistons.push({
-                  side: side, y: py, w: 0, targetW: this.chunk * (2 + Math.random()*2), h: this.chunk * 1.5, state: 'extending'
-              });
-              this.pistonCooldown = 5 + Math.random() * 5;
-              if (this.game.playSound) this.game.playSound('bumper');
-          }
+        if (this.pistons.length < 2) {
+          var side = Math.random() > 0.5 ? 'left' : 'right';
+          // Random Y position (not too close to paddle)
+          var py = this.top + 100 + Math.random() * (this.height - 300);
+
+          this.pistons.push({
+            side: side,
+            y: py,
+            w: 0,
+            targetW: this.chunk * (2 + Math.random() * 2),
+            h: this.chunk * 1.5,
+            state: 'extending'
+          });
+          this.pistonCooldown = 5 + Math.random() * 5;
+          if (this.game.playSound) this.game.playSound('bumper');
+        }
       }
-      for(var i=this.pistons.length-1; i>=0; i--) {
-          var p = this.pistons[i];
-          var speed = 100; 
-          if (p.state === 'extending') {
-              p.w += speed * dt;
-              if (p.w >= p.targetW) { p.w = p.targetW; p.state = 'waiting'; p.waitTimer = 3.0; }
-          } else if (p.state === 'waiting') {
-              p.waitTimer -= dt;
-              if (p.waitTimer <= 0) p.state = 'retracting';
-          } else if (p.state === 'retracting') {
-              p.w -= speed * dt;
-              if (p.w <= 0) this.pistons.splice(i, 1);
+
+      // Animate Pistons
+      for (var i = this.pistons.length - 1; i >= 0; i--) {
+        var p = this.pistons[i];
+        var speed = 100; // px per sec
+
+        if (p.state === 'extending') {
+          p.w += speed * dt;
+          if (p.w >= p.targetW) {
+            p.w = p.targetW;
+            p.state = 'waiting';
+            p.waitTimer = 3.0;
           }
-          p.hH = p.h / 2; 
-          if (p.side === 'left') {
-              p.x = this.left; p.bb = { left: p.x, right: p.x + p.w, top: p.y - p.hH, bottom: p.y + p.hH };
-          } else {
-              p.x = this.right; p.bb = { left: p.x - p.w, right: p.x, top: p.y - p.hH, bottom: p.y + p.hH };
+        } else if (p.state === 'waiting') {
+          p.waitTimer -= dt;
+          if (p.waitTimer <= 0) p.state = 'retracting';
+        } else if (p.state === 'retracting') {
+          p.w -= speed * dt;
+          if (p.w <= 0) {
+            this.pistons.splice(i, 1);
           }
+        }
+
+        // Calculate bounding box for collision
+        p.hH = p.h / 2; // half height
+        if (p.side === 'left') {
+          p.x = this.left;
+          p.bb = { left: p.x, right: p.x + p.w, top: p.y - p.hH, bottom: p.y + p.hH };
+        } else {
+          p.x = this.right;
+          p.bb = { left: p.x - p.w, right: p.x, top: p.y - p.hH, bottom: p.y + p.hH };
+        }
       }
     },
-
-    updateBoss: function(dt) {
-        var b = this.boss;
-        b.t += dt;
-		if (b.x <= 0 || b.x > this.right) {
-             b.x = this.left + (this.width - b.w)/2;
-        }
-        b.x = this.left + (this.width - b.w)/2 + Math.sin(b.t * b.speed) * (this.width - b.w)/2;
-        b.attackTimer -= dt;
-        if (b.attackTimer <= 0) {
-            b.attackTimer = 2.0 + Math.random() * 2.0;
-            this.bossAttack();
-        }
-    },
-
-    bossAttack: function() {
-        var b = this.boss;
-        if (!b) return;
-        var bx = b.x + b.w/2 - this.chunk/2;
-        var by = b.y + b.h;
-        
-        // Prevent Overlap
-        for (var i = 0; i < this.bricks.length; i++) {
-            var other = this.bricks[i];
-            if (!other.hit && 
-                bx < other.x + other.w && bx + this.chunk > other.x && 
-                by < other.y + other.h && by + this.chunk > other.y) {
-                return; 
-            }
-        }
-
-        var brick = {
-            isbrick: true, hit: false, c: 'X', pos: null, score: 50, color: '#FF0000', 
-            x: bx, y: by, w: this.chunk, h: this.chunk, hp: 1, powerupChance: 0.25,
-			theme: b.theme // Attach boss theme to minion
-        };
-        this.bricks.push(brick);
-        if (this.game.playSound) this.game.playSound('brick');
-    },
-
-    initBoss: function(theme, levelNum) {
-        var hp = 10 + (levelNum * 2); 
-        this.boss = {
-            active: true,
-            theme: theme,
-            hp: hp,
-            maxHp: hp,
-            x: 100, y: this.top + this.chunk,
-            w: this.chunk * 4,
-            h: this.chunk * 3,
-            t: 0,
-            speed: 0.5 + (levelNum * 0.05),
-            attackTimer: 2.0
-        };
-
-        if (theme === 'synthwave') { this.boss.name = "Neon Rider"; this.boss.color = '#FF00FF'; }
-        else if (theme === 'city') { this.boss.name = "Wrecking Crew"; this.boss.color = '#FFFF00'; }
-        else if (theme === 'space') { this.boss.name = "Mothership"; this.boss.color = '#00FFFF'; }
-        else if (theme === 'forest') { this.boss.name = "Ancient Dragon"; this.boss.color = '#00FF00'; }
-        else if (theme === 'circuit') { this.boss.name = "M.C.P."; this.boss.color = '#FF0000'; }
-    },
-
-	// Trigger Chain Lightning
+    // Trigger Chain Lightning
     triggerLightning: function (sourceBrick) {
-	  var x = sourceBrick.x + sourceBrick.w/2;
       if (!sourceBrick) return;
       if (this.playSound) this.playSound('lightning');
 
@@ -6360,14 +6553,6 @@ window.Breakout = {
         }
       }
 
-      // 3. Damage Boss
-      if (this.boss && this.boss.active) {
-        // Check if lightning X hits Boss X range
-        if (x >= this.boss.x && x <= this.boss.x + this.boss.w) {
-            this.damageBoss(2.5); // Big Damage
-        }
-      }
-
       if (hitCount > 0 && this.game.playSound) this.game.playSound('lasers');
     },
 
@@ -6377,8 +6562,6 @@ window.Breakout = {
       brick.color = '#39FF14';
       brick.score = 500;
       brick.hp = 1;
-	  if (!brick.theme && this.boss) brick.theme = this.boss.theme;
-	  this.rerender = true;
     },
 
     spreadVirus: function () {
@@ -6461,16 +6644,6 @@ window.Breakout = {
           var tx = cx + (dir.x * step);
           var ty = cy + (dir.y * step);
 
-		  if (this.boss && this.boss.active) {
-            // Check if beam X overlaps Boss X range
-            // Beam width is approx 40px centered at x? Or left-aligned? 
-            // Let's assume centered for fairness: x-20 to x+20
-            if (x + 20 >= this.boss.x && x - 20 <= this.boss.x + this.boss.w) {
-                this.damageBoss(10); // Heavy Beam Damage
-                if (this.game.particles) this.game.particles.spawnHit(x, this.boss.y + this.boss.h/2, '#00FF00');
-            }
-          }
-
           // Find brick at this grid location
           // (This is an O(N) scan, could be optimized but fine for Breakout)
           for (var i = 0; i < this.bricks.length; i++) {
@@ -6495,40 +6668,6 @@ window.Breakout = {
       if (hitCount > 0) {
         this.game.requestShake(8, 0.1);
       }
-    },
-	
-    triggerExplosion: function(x, y, radius) {
-        if (this.game.playSound) this.game.playSound('explosion');
-        if (this.game.particles) this.game.particles.spawnExplosion(x, y, '#FF4500');
-
-        // A. Damage Boss
-        if (this.boss && this.boss.active) {
-            var b = this.boss;
-            var bx = b.x + b.w/2;
-            var by = b.y + b.h/2;
-            var dist = Math.sqrt((x-bx)*(x-bx) + (y-by)*(y-by));
-            
-            // Check if explosion reaches boss
-            if (dist < radius + Math.max(b.w, b.h)/2) {
-                this.damageBoss(5); // Explosion Damage
-            }
-        }
-
-        // B. Damage Bricks
-        var bricks = this.bricks;
-        for(var i=0; i<bricks.length; i++) {
-            var b = bricks[i];
-            if(!b.hit) {
-               var bx = b.x + b.w/2;
-               var by = b.y + b.h/2;
-               var dist = Math.sqrt((x-bx)*(x-bx) + (y-by)*(y-by));
-               
-               if (dist < radius + Math.max(b.w, b.h)/2) {
-                   this.remove(b);
-                   this.game.score.increase(b.score);
-               }
-            }
-        }
     },
 
     // Directional Smash (Shotgun Effect)
@@ -6618,37 +6757,9 @@ window.Breakout = {
       this.xFactorBolts = [];
       this.pistons = [];
       this.vent = { active: false, state: 'closed', timer: 5, x: 0, w: 0 };
-	  this.boss = null;
       this.virusTimer = 0;
-      this.bricks = [];
-      this.numbricks = 0;
-	  
-      var stageInfo = this.game.getStageInfo ? this.game.getStageInfo(level) : { type: 'level', layout: null };
-      
-      // --- BOSS ---
-      if (stageInfo.type === 'boss') {
-          if (this.game.bg && this.game.bg.setTheme) {
-              this.game.theme = stageInfo.theme;
-              this.game.bg.setTheme(stageInfo.theme);
-          }
-          this.initBoss(stageInfo.theme, level + 1);
-          // Resize immediately to set walls
-          this.resize(); 
-          if (this.game.floaters) this.game.floaters.spawn(this.game.width/2, this.game.height/2, "BOSS BATTLE!", '#FF0000');
-          return;
-      }
-      
-      var layout = stageInfo.layout;
-      if (!layout) {
-          console.warn("Layout missing for level:", level, "Loading fallback.");
-          layout = { bricks: [], colors: {}, theme: 'synthwave' };
-      }
-
-      // Update Theme for normal levels
-      if (layout.theme && this.game.bg && this.game.bg.setTheme) {
-          this.game.theme = layout.theme;
-          this.game.bg.setTheme(layout.theme);
-      }
+      var layout = Breakout.Levels[level];
+      if (!layout) return;
 
       var countsLC = {};
       for (var ry = 0; ry < layout.bricks.length; ry++) {
@@ -6774,24 +6885,14 @@ window.Breakout = {
         w: this.wall.size,
         h: this.wall.size * 2 + this.height
       });
-	  
-      // Recalculate Boss Position on Resize
-      if (this.boss) {
-          this.boss.w = this.chunk * 4;
-          this.boss.h = this.chunk * 3;
-          this.boss.x = this.left + (this.width - this.boss.w)/2;
-          this.boss.y = this.top + this.chunk;
-      }
 
-      for (var n = 0; n < this.bricks.length; n++) {
+      for (var n = 0; n < this.numbricks; n++) {
         var brick = this.bricks[n];
-        if (brick.pos) { 
-            brick.x = this.left + (brick.pos.x1 * this.chunk);
-            brick.y = this.top + (brick.pos.y * this.chunk);
-            brick.w = (brick.pos.x2 - brick.pos.x1 + 1) * this.chunk;
-            brick.h = this.chunk;
-            Game.Math.bound(brick);
-        }
+        brick.x = this.left + (brick.pos.x1 * this.chunk);
+        brick.y = this.top + (brick.pos.y * this.chunk);
+        brick.w = (brick.pos.x2 - brick.pos.x1 + 1) * this.chunk;
+        brick.h = this.chunk;
+        Game.Math.bound(brick);
       }
       this.rerender = true;
     },
@@ -6882,145 +6983,50 @@ window.Breakout = {
       return cvs;
     },
 
-	getBossSprite: function(theme, color, w, h) {
-        var key = "boss_" + theme + "_" + Math.floor(w) + "_" + Math.floor(h);
-        if (this.brickCache[key]) return this.brickCache[key];
-        
-        var cvs = document.createElement('canvas'); 
-        cvs.width = w; cvs.height = h; 
-        var ctx = cvs.getContext('2d');
-        
-        ctx.shadowBlur = 15; ctx.shadowColor = color;
-        
-        if (theme === 'synthwave') { // Neon Car
-            ctx.fillStyle = color;
-            ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(w, h); ctx.lineTo(w*0.9, h*0.6); ctx.lineTo(w*0.1, h*0.6); ctx.fill();
-            ctx.fillStyle = '#000'; ctx.fillRect(w*0.2, h*0.65, w*0.6, h*0.1); 
-            ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(w*0.15, h*0.75, h*0.15, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(w*0.85, h*0.75, h*0.15, 0, Math.PI*2); ctx.fill();
-        } else if (theme === 'city') { // Wrecking Machine
-            ctx.fillStyle = color; ctx.fillRect(w*0.1, h*0.4, w*0.8, h*0.6);
-            ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(w*0.5, h*0.4, w*0.3, Math.PI, 0); ctx.fill(); 
-            ctx.fillStyle = '#FF0'; ctx.fillRect(w*0.1, h*0.8, w*0.8, h*0.2); 
-            ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(w*0.2, h*0.8); ctx.lineTo(w*0.8, h*0.8); ctx.stroke();
-        } else if (theme === 'space') { // UFO
-            ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(w/2, h*0.6, w/2, h/3, 0, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#AAF'; ctx.beginPath(); ctx.arc(w/2, h*0.4, w/4, Math.PI, 0); ctx.fill(); 
-            ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(w*0.2, h*0.6, w*0.05, 0, Math.PI*2); ctx.arc(w*0.5, h*0.8, w*0.05, 0, Math.PI*2); ctx.arc(w*0.8, h*0.6, w*0.05, 0, Math.PI*2); ctx.fill();
-        } else if (theme === 'forest') { // Dragon Head
-            ctx.fillStyle = color; 
-            ctx.beginPath(); ctx.moveTo(w*0.2, h*0.2); ctx.quadraticCurveTo(w*0.5, h*0.0, w*0.8, h*0.2); 
-            ctx.lineTo(w*0.9, h*0.6); ctx.quadraticCurveTo(w*0.5, h*1.0, w*0.1, h*0.6); ctx.fill();
-            ctx.fillStyle = '#FF0'; ctx.beginPath(); ctx.moveTo(w*0.3, h*0.4); ctx.lineTo(w*0.4, h*0.5); ctx.lineTo(w*0.3, h*0.6); ctx.fill(); 
-            ctx.beginPath(); ctx.moveTo(w*0.7, h*0.4); ctx.lineTo(w*0.6, h*0.5); ctx.lineTo(w*0.7, h*0.6); ctx.fill(); 
-        } else if (theme === 'circuit') { // MCP
-            ctx.fillStyle = '#222'; ctx.fillRect(0, 0, w, h);
-            ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.strokeRect(2, 2, w-4, h-4);
-            ctx.fillStyle = color; ctx.fillRect(w*0.1, h*0.4, w*0.8, h*0.2); 
-            ctx.fillStyle = '#F00'; ctx.beginPath(); ctx.arc(w/2, h/2, h*0.08, 0, Math.PI*2); ctx.fill(); 
-            ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(w*0.2, 0); ctx.lineTo(w*0.2, h*0.4); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(w*0.8, 0); ctx.lineTo(w*0.8, h*0.4); ctx.stroke();
-        }
-        
-        this.brickCache[key] = cvs;
-        return cvs;
-    },
-
-    getBrickSprite: function(color, w, h, isMinion, theme) {
+    getBrickSprite: function (color, w, h) {
       if (!w || !h || w < 1 || h < 1) return null;
-      var key = color + "_" + Math.floor(w) + "_" + Math.floor(h) + (isMinion ? ("_m" + theme) : "");
+      var key = color + "_" + Math.floor(w) + "_" + Math.floor(h);
       if (this.brickCache[key]) return this.brickCache[key];
 
       var cvs = document.createElement('canvas');
       cvs.width = w;
       cvs.height = h;
       var ctx = cvs.getContext('2d');
-	  
-      if (isMinion) {
-          ctx.fillStyle = color;
-          
-          // --- MINION THEMES ---
-          if (theme === 'synthwave') { 
-              ctx.beginPath(); ctx.moveTo(w/2, 0); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
-              ctx.fillStyle = '#000'; ctx.beginPath(); ctx.moveTo(w/2, h*0.3); ctx.lineTo(w*0.8, h*0.9); ctx.lineTo(w*0.2, h*0.9); ctx.fill();
-          } else if (theme === 'city') { 
-              ctx.beginPath(); ctx.arc(w/2, h/2, w*0.4, 0, Math.PI*2); ctx.fill();
-              ctx.strokeStyle = color; ctx.lineWidth = 3;
-              for(var i=0; i<8; i++) {
-                  ctx.beginPath(); ctx.moveTo(w/2, h/2); 
-                  ctx.lineTo(w/2 + Math.cos(i*Math.PI/4)*w*0.5, h/2 + Math.sin(i*Math.PI/4)*h*0.5); ctx.stroke();
-              }
-              ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(w/2, h/2, w*0.15, 0, Math.PI*2); ctx.fill();
-          } else if (theme === 'space') { 
-              ctx.beginPath(); 
-              ctx.rect(w*0.2, h*0.2, w*0.6, h*0.4);
-              ctx.rect(w*0.1, h*0.4, w*0.8, h*0.2);
-              ctx.rect(w*0.1, h*0.6, w*0.2, h*0.2); ctx.rect(w*0.7, h*0.6, w*0.2, h*0.2);
-              ctx.fill();
-              ctx.fillStyle = '#000'; ctx.fillRect(w*0.3, h*0.3, w*0.1, h*0.1); ctx.fillRect(w*0.6, h*0.3, w*0.1, h*0.1);
-          } else if (theme === 'forest') { 
-              ctx.beginPath(); ctx.arc(w/2, h*0.6, w*0.25, 0, Math.PI*2); ctx.fill(); 
-              ctx.beginPath(); ctx.arc(w/2, h*0.3, w*0.15, 0, Math.PI*2); ctx.fill(); 
-              ctx.strokeStyle = color; ctx.lineWidth = 2;
-              ctx.beginPath(); ctx.moveTo(w*0.25, h*0.6); ctx.lineTo(0, h*0.4); ctx.stroke();
-              ctx.beginPath(); ctx.moveTo(w*0.75, h*0.6); ctx.lineTo(w, h*0.4); ctx.stroke();
-              ctx.beginPath(); ctx.moveTo(w*0.25, h*0.6); ctx.lineTo(0, h*0.8); ctx.stroke();
-              ctx.beginPath(); ctx.moveTo(w*0.75, h*0.6); ctx.lineTo(w, h*0.8); ctx.stroke();
-          } else if (theme === 'circuit') { 
-              ctx.fillRect(w*0.2, h*0.2, w*0.6, h*0.6);
-              ctx.strokeStyle = color; ctx.lineWidth = 2;
-              ctx.beginPath(); ctx.moveTo(0, h*0.3); ctx.lineTo(w*0.2, h*0.3); ctx.stroke();
-              ctx.beginPath(); ctx.moveTo(w*0.8, h*0.3); ctx.lineTo(w, h*0.3); ctx.stroke();
-              ctx.beginPath(); ctx.moveTo(0, h*0.7); ctx.lineTo(w*0.2, h*0.7); ctx.stroke();
-              ctx.beginPath(); ctx.moveTo(w*0.8, h*0.7); ctx.lineTo(w, h*0.7); ctx.stroke();
-              ctx.fillStyle = '#000'; ctx.fillRect(w*0.3, h*0.3, w*0.4, h*0.4);
-          } else {
-              ctx.beginPath(); 
-              ctx.arc(w/2, h/2 - h*0.1, w*0.35, Math.PI, 0); 
-              ctx.lineTo(w*0.8, h*0.8);
-              ctx.lineTo(w*0.7, h*0.8); ctx.lineTo(w*0.7, h*0.7); ctx.lineTo(w*0.6, h*0.7); ctx.lineTo(w*0.6, h*0.8); 
-              ctx.lineTo(w*0.4, h*0.8); ctx.lineTo(w*0.4, h*0.7); ctx.lineTo(w*0.3, h*0.7); ctx.lineTo(w*0.3, h*0.8);
-              ctx.lineTo(w*0.2, h*0.8); 
-              ctx.fill();
-              ctx.fillStyle = '#000';
-              ctx.beginPath(); ctx.arc(w*0.35, h*0.45, w*0.08, 0, Math.PI*2); ctx.fill();
-              ctx.beginPath(); ctx.arc(w*0.65, h*0.45, w*0.08, 0, Math.PI*2); ctx.fill();
-          }
-      } else {
-        var bevel = Math.max(2, Math.floor(h * 0.15));
-	    
-        ctx.fillStyle = color;
-        ctx.fillRect(0, 0, w, h);
-	    
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx.beginPath();
-        ctx.moveTo(0, h);
-        ctx.lineTo(0, 0);
-        ctx.lineTo(w, 0);
-        ctx.lineTo(w - bevel, bevel);
-        ctx.lineTo(bevel, bevel);
-        ctx.lineTo(bevel, h - bevel);
-        ctx.fill();
-	    
-        ctx.fillStyle = 'rgba(0,0,0,0.35)';
-        ctx.beginPath();
-        ctx.moveTo(0, h);
-        ctx.lineTo(w, h);
-        ctx.lineTo(w, 0);
-        ctx.lineTo(w - bevel, bevel);
-        ctx.lineTo(w - bevel, h - bevel);
-        ctx.lineTo(bevel, h - bevel);
-        ctx.fill();
-	    
-        var grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, 'rgba(255,255,255,0.1)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.1)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(bevel, bevel, w - bevel * 2, h - bevel * 2);
-	    
-        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(0, 0, w, h);
-      } 
+      var bevel = Math.max(2, Math.floor(h * 0.15));
+
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(w, 0);
+      ctx.lineTo(w - bevel, bevel);
+      ctx.lineTo(bevel, bevel);
+      ctx.lineTo(bevel, h - bevel);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.lineTo(w, h);
+      ctx.lineTo(w, 0);
+      ctx.lineTo(w - bevel, bevel);
+      ctx.lineTo(w - bevel, h - bevel);
+      ctx.lineTo(bevel, h - bevel);
+      ctx.fill();
+
+      var grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, 'rgba(255,255,255,0.1)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.1)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(bevel, bevel, w - bevel * 2, h - bevel * 2);
+
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, 0, w, h);
+
       this.brickCache[key] = cvs;
       return cvs;
     },
@@ -7138,44 +7144,16 @@ window.Breakout = {
       }
       ctx.restore();
 
-      // --- BOSS DRAWING (Using Sprites) ---
-      if (this.boss) {
-          var b = this.boss;
-          ctx.save();
-          // Shadow handled in sprite, but we can add global glow
-          ctx.shadowBlur = 20; ctx.shadowColor = b.color;
-          
-          var sprite = this.getBossSprite(b.theme, b.color, b.w, b.h);
-          if (sprite) ctx.drawImage(sprite, b.x, b.y);
-          else {
-              ctx.fillStyle = b.color;
-              ctx.fillRect(b.x, b.y, b.w, b.h); // Fallback
-          }
-          
-          ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = 'bold 16px Orbitron';
-          ctx.fillText(b.name, b.x + b.w/2, b.y - 10);
-          var hpPct = b.hp / b.maxHp;
-          ctx.fillStyle = '#333'; ctx.fillRect(b.x, b.y - 8, b.w, 5);
-          ctx.fillStyle = '#0f0'; ctx.fillRect(b.x, b.y - 8, b.w * hpPct, 5);
-          ctx.restore();
-      }
-
-      // Bricks 
-      for (var n = 0; n < this.bricks.length; n++) {
+      for (var n = 0; n < this.numbricks; n++) {
         var b = this.bricks[n];
-        if (b && !b.hit) { 
-          if (!isFinite(b.x) || !isFinite(b.y) || !isFinite(b.w) || !isFinite(b.h)) continue;
-          
-          // Pass isMinion flag based on 'X' character
-          var isMinion = (b.c === 'X');
-		  var theme = b.theme || (this.boss ? this.boss.theme : 'synthwave');
-          var sprite = this.getBrickSprite(b.color, b.w, b.h, isMinion, theme);
-          
+        if (!b.hit) {
+          var sprite = this.getBrickSprite(b.color, b.w, b.h);
           if (sprite) ctx.drawImage(sprite, b.x, b.y);
-          if (b.cracked && b.pos) { 
-             var variant = (b.pos.x1 + b.pos.y) % 3;
-             var crack = this.getCrackSprite(b.w, b.h, variant);
-             if (crack) ctx.drawImage(crack, b.x, b.y);
+
+          if (b.cracked) {
+            var variant = (b.pos.x1 + b.pos.y) % 3;
+            var crack = this.getCrackSprite(b.w, b.h, variant);
+            if (crack) ctx.drawImage(crack, b.x, b.y);
           }
         }
       }
@@ -7339,40 +7317,10 @@ window.Breakout = {
       this.numhits++;
       this.rerender = true;
     },
-
-    damageBoss: function(dmg) {
-        if (!this.boss) return;
-        this.boss.hp -= dmg;
-        if (this.game.playSound) this.game.playSound('boss_hit') || this.game.playSound('brick');
-        
-        if (this.boss.hp <= 0) {
-            this.killBoss();
-        }
-    },
-    
-    killBoss: function() {
-        if (this.game.playSound) this.game.playSound('boss_die') || this.game.playSound('explosion');
-        
-        // Unlock Achievement
-        if (this.game.achievements) {
-            this.game.achievements.unlock('boss_' + this.boss.theme);
-        }
-        
-        this.boss = null;
-        // Instantly win level
-        this.game.winLevel();
-    },
-
     empty: function () {
-      if (this.boss) return false;
       if (this.numbricks === 0) return false;
-      for(var i=0; i<this.bricks.length; i++) {
-          if (!this.bricks[i].hit) return false;
-      }
-      return true;
       return (this.numhits === this.numbricks);
     },
-
     drawWalls: function (ctx) {
       if (!this.wall || !this.wall.top) return;
     }
@@ -7513,37 +7461,6 @@ window.Breakout = {
       if (this.game.playSound) this.game.playSound('jump'); // Sound effect
       if (this.game.requestShake) this.game.requestShake(3, 0.1);
     },
-	
-    // --- GAMEPAD POLLING ---
-    pollGamepad: function() {
-        if (!navigator.getGamepads) return 0;
-        var gp = navigator.getGamepads()[0]; // Player 1
-        if (!gp) return 0;
-
-        // 1. Action Button (A / Cross)
-        if (gp.buttons[0].pressed) {
-            if (!this._gpActionPressed) {
-                this._gpActionPressed = true;
-                // Mimic Spacebar Logic
-                if (this.game.ball.releaseSticky && this.game.ball.releaseSticky()) {}
-                else if (this.game.ball.hasParkedBall && this.game.ball.hasParkedBall()) { this.game.ball.launchNow(); }
-                else { this.triggerSmash(); }
-            }
-        } else {
-            this._gpActionPressed = false;
-        }
-
-        // 2. Movement (Left Stick X OR D-Pad)
-        var x = 0;
-        // Analog Stick (with Deadzone)
-        if (Math.abs(gp.axes[0]) > 0.15) x = gp.axes[0];
-        
-        // D-Pad Override
-        if (gp.buttons[14].pressed) x = -1; // Left
-        if (gp.buttons[15].pressed) x = 1;  // Right
-        
-        return x;
-    },
 
     // --- 3. MAIN LOOP ---
     update: function (dt) {
@@ -7672,8 +7589,6 @@ window.Breakout = {
 
       // E. MOVEMENT LOGIC 
       var mv = this.moving;
-	  var gp = this.pollGamepad();
-      if (Math.abs(gp) > 0) mv = gp;
       if (pup.isConfusedActive && pup.isConfusedActive()) mv = -mv;
 
       // Mouse/Key Movement
@@ -7981,7 +7896,7 @@ window.Breakout = {
     moveLeft: function () {
       if (this.moving === 0) { // New Press
         var now = Date.now();
-        if (now - this.dash.lastLeftUp < 175) {
+        if (now - this.dash.lastLeftUp < 250) {
           this.triggerDash(-1);
         }
       }
@@ -7990,7 +7905,7 @@ window.Breakout = {
     moveRight: function () {
       if (this.moving === 0) { // New Press
         var now = Date.now();
-        if (now - this.dash.lastRightUp < 175) {
+        if (now - this.dash.lastRightUp < 250) {
           this.triggerDash(1);
         }
       }
@@ -8143,27 +8058,8 @@ window.Breakout = {
       }
     },
 
-    rebuildTargets: function(){
-      // SAFETY CHECK: Ensure court walls exist
-      if (!this.game.court || !this.game.court.wall || !this.game.court.wall.top) return;
-
-      this.targets = [];
-      // Add walls
-      if (this.game.court.wall.top) this.targets.push(this.game.court.wall.top);
-      if (this.game.court.wall.left) this.targets.push(this.game.court.wall.left);
-      if (this.game.court.wall.right) this.targets.push(this.game.court.wall.right);
-      
-      // Add paddle segments
-      var segs = this.game.paddle.getSegments();
-      for(var i=0; i<segs.length; i++) this.targets.push(segs[i]);
-      
-      // Add bricks
-      if (this.game.court.bricks) {
-          for(var i=0; i<this.game.court.bricks.length; i++) {
-              var b = this.game.court.bricks[i];
-              if (!b.hit) this.targets.push(b);
-          }
-      }
+    rebuildTargets: function () {
+      this.hitTargets = [this.game.paddle, this.game.court.wall.top, this.game.court.wall.left, this.game.court.wall.right].concat(this.game.court.bricks);
     },
 
     // === 2. GAMEPLAY MODIFIERS ===
@@ -8832,14 +8728,6 @@ window.Breakout = {
               } else {
                 b.y = seg.top - b.radius;
                 b.dy = -Math.abs(b.dy);
-                // Add "English" (Spin)
-                // If paddle is moving left/right, push the ball that way
-                if (this.game.paddle.moving !== 0) {
-                    var spinForce = 150; // Pixels per second boost
-                    b.dx += this.game.paddle.moving * spinForce * dt;                   
-                    // Play a "screech" sound if the spin was significant
-                    if (this.game.playSound) this.game.playSound('brick'); 
-                }
                 if (this.game && this.game.ensureBallSpeed) this.game.ensureBallSpeed(b);
                 var hit = (b.x - (seg.left + seg.w / 2)) / (seg.w / 2);
                 b.dx += hit * (0.35 * b.speed);
@@ -8848,83 +8736,6 @@ window.Breakout = {
               break;
             }
           }
-        }
- 
-        // --- 1. BOSS COLLISION ---
-        if (this.game.court.boss) {
-            var bs = this.game.court.boss;
-            // AABB Collision Check
-            if (b.x + b.radius > bs.x && b.x - b.radius < bs.x + bs.w &&
-                b.y + b.radius > bs.y && b.y - b.radius < bs.y + bs.h) {
-                
-                // Determine overlaps to find closest side
-                var distLeft = Math.abs(b.x - bs.x);
-                var distRight = Math.abs(b.x - (bs.x + bs.w));
-                var distTop = Math.abs(b.y - bs.y);
-                var distBottom = Math.abs(b.y - (bs.y + bs.h));
-                var minDist = Math.min(distLeft, distRight, distTop, distBottom);
-                
-                if (minDist === distBottom) { // Hit Bottom
-                    b.y = bs.y + bs.h + b.radius + 0.1;
-                    b.dy = Math.abs(b.dy);
-                } else if (minDist === distTop) { // Hit Top
-                    b.y = bs.y - b.radius - 0.1;
-                    b.dy = -Math.abs(b.dy);
-                } else if (minDist === distLeft) { // Hit Left
-                    b.x = bs.x - b.radius - 0.1;
-                    b.dx = -Math.abs(b.dx);
-                } else { // Hit Right
-                    b.x = bs.x + bs.w + b.radius + 0.1;
-                    b.dx = Math.abs(b.dx);
-                }
-
-                // Damage Boss
-                var dmg = 1;
-				if (this.game.powerup && this.game.powerup.isPowerSmashActive && this.game.powerup.isPowerSmashActive()) {
-                    dmg = 3; 
-                    if (this.game.particles) this.game.particles.spawnHit(b.x, b.y, '#FF0000');
-                }
-                if (this.game.powerup && this.game.powerup.isFireActive && this.game.powerup.isFireActive()) {
-                    this.game.court.triggerExplosion(b.x, b.y, 80); // 80px radius
-                }
-                this.game.court.damageBoss(dmg);
-            }
-        }
-
-        // --- 2. MINION/DYNAMIC BRICK COLLISION ---
-        // Iterate only bricks without grid positions (Boss Minions)
-        var bricks = this.game.court.bricks;
-        for (var j = 0; j < bricks.length; j++) {
-            var brick = bricks[j];
-            
-            // Only check dynamic bricks (pos === null) that haven't been hit
-            if (!brick.hit && !brick.pos) { 
-                if (b.x + b.radius > brick.x && b.x - b.radius < brick.x + brick.w &&
-                    b.y + b.radius > brick.y && b.y - b.radius < brick.y + brick.h) {
-                    
-                    // Determine bounce direction
-                    var overlapX = (b.radius + brick.w/2) - Math.abs(b.x - (brick.x + brick.w/2));
-                    var overlapY = (b.radius + brick.h/2) - Math.abs(b.y - (brick.y + brick.h/2));
-                    
-                    if (overlapX < overlapY) { 
-                        b.dx = -b.dx; // Horizontal Bounce
-                        if (b.x < brick.x + brick.w/2) b.x -= overlapX; else b.x += overlapX;
-                    } else { 
-                        b.dy = -b.dy; // Vertical Bounce
-                        if (b.y < brick.y + brick.h/2) b.y -= overlapY; else b.y += overlapY;
-                    }
-                    
-                    // Destroy Minion
-                    this.game.court.remove(brick);
-                    this.game.score.increase(brick.score || 50);
-                    if (this.game.playSound) this.game.playSound('brick');
-                    
-                    // Chance for Powerup (Boss minions have high drop rate)
-                    if (brick.powerupChance && Math.random() < brick.powerupChance) {
-                        this.game.powerup.spawn(brick.x, brick.y);
-                    }
-                }
-            }
         }
 
         // Brick Collision
@@ -9119,7 +8930,6 @@ window.Breakout = {
     },
 
     draw: function (ctx) {
-      // 1. Determine Global States (Once per frame)
       var chaosOn = !!(this.game.powerup && this.game.powerup.isChaosActive && this.game.powerup.isChaosActive());
       var chaosPulse = chaosOn ? (0.6 + 0.4 * Math.abs(Math.sin(Date.now() / 180))) : 0;
       var explodingOn = !!(this.game.powerup && this.game.powerup.isExplodingActive && this.game.powerup.isExplodingActive());
@@ -9127,66 +8937,70 @@ window.Breakout = {
       var lightningOn = (this.game.powerup.isLightningActive && this.game.powerup.isLightningActive());
       var fastActive = (this.temp && this.temp.speed > 1);
 
-      // We group all trail rendering here to minimize context state changes.
-      // We only open the "Lighter" blend mode once.
-      
-      var hasTrails = false;
-      for(var i=0; i<this.balls.length; i++) if(this.balls[i].trail && this.balls[i].trail.length) { hasTrails = true; break; }
-
-      if (hasTrails) {
-          ctx.save();
-          ctx.globalCompositeOperation = 'lighter';
-          
-          for (let i = 0; i < this.balls.length; i++) {
-            var b = this.balls[i];
-            if (!b.trail || !b.trail.length) continue;
-
-            if (fireOn) {
-                // Fire Trails
-                for (let t = 0; t < b.trail.length; t++) {
-                    var p = b.trail[t];
-                    var u = (t + 1) / (b.trail.length + 1);
-                    var a = 0.06 + 0.18 * u;
-                    
-                    // Core
-                    ctx.fillStyle = 'rgba(255,122,0,' + a.toFixed(3) + ')';
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, Math.max(1.0, p.r * (0.85 + 0.30 * u)), 0, Math.PI * 2, false);
-                    ctx.fill();
-                    
-                    // Glow
-                    ctx.fillStyle = 'rgba(255,220,120,' + (a * 0.75).toFixed(3) + ')';
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, Math.max(1.0, p.r * (0.55 + 0.25 * u)), 0, Math.PI * 2, false);
-                    ctx.fill();
-                }
-            } else if (fastActive || chaosOn) {
-                // Fast/Chaos Trails
-                var tintBase = chaosOn ? 'rgba(156,39,176,' : 'rgba(255,255,255,';
-                for (let t2 = 0; t2 < b.trail.length; t2++) {
-                    var p2 = b.trail[t2];
-                    var u2 = (t2 + 1) / (b.trail.length + 1);
-                    var a2 = 0.08 + 0.14 * u2;
-                    
-                    ctx.fillStyle = tintBase + a2.toFixed(3) + ')';
-                    ctx.beginPath();
-                    ctx.arc(p2.x, p2.y, Math.max(1.0, p2.r * (0.9 + 0.3 * u2)), 0, Math.PI * 2, false);
-                    ctx.fill();
-                }
-            }
-          }
-          ctx.restore(); // Close 'lighter' mode
-      }
-
-      // --- DRAW BALLS & AURAS ---
       ctx.save();
 
       for (let i = 0; i < this.balls.length; i++) {
         var b = this.balls[i];
-        let x = b.x, y = b.y, r = b.radius;
+        let x = b.x,
+          y = b.y,
+          r = b.radius;
         if (!isFinite(x) || !isFinite(y) || !isFinite(r) || r <= 0) continue;
 
-        // 1. Chaos Aura
+        // ---- A. Trails (Kept your exact logic) ----
+        var fastActive = !!(this.temp && this.temp.speed > 1);
+
+        if (fireOn && b.trail && b.trail.length) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          for (let t = 0; t < b.trail.length; t++) {
+            var p = b.trail[t];
+            var u = (t + 1) / (b.trail.length + 1);
+            var a = 0.06 + 0.18 * u;
+            ctx.fillStyle = 'rgba(255,122,0,' + a.toFixed(3) + ')';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, Math.max(1.0, p.r * (0.85 + 0.30 * u)), 0, Math.PI * 2, false);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,220,120,' + (a * 0.75).toFixed(3) + ')';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, Math.max(1.0, p.r * (0.55 + 0.25 * u)), 0, Math.PI * 2, false);
+            ctx.fill();
+          }
+          ctx.restore();
+        } else if ((fastActive || chaosOn) && b.trail && b.trail.length) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          var tintBase = chaosOn ? 'rgba(156,39,176,' : 'rgba(255,255,255,';
+          for (let t2 = 0; t2 < b.trail.length; t2++) {
+            var p2 = b.trail[t2];
+            var u2 = (t2 + 1) / (b.trail.length + 1);
+            var a2 = 0.08 + 0.14 * u2;
+            ctx.fillStyle = tintBase + a2.toFixed(3) + ')';
+            ctx.beginPath();
+            ctx.arc(p2.x, p2.y, Math.max(1.0, p2.r * (0.9 + 0.3 * u2)), 0, Math.PI * 2, false);
+            ctx.fill();
+          }
+          ctx.restore();
+        } else if (this.game.powerup.isLightningActive()) {
+          ctx.save();
+          ctx.strokeStyle = '#00FFFF';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          // Draw 3 random sparks
+          for (let i = 0; i < 3; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let dist = r * 1.5;
+            let sx = this.x + Math.cos(angle) * r;
+            let sy = this.y + Math.sin(angle) * r;
+            let ex = this.x + Math.cos(angle) * dist;
+            let ey = this.y + Math.sin(angle) * dist;
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(ex, ey);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // ---- B. Auras (Kept your exact logic) ----
         if (chaosOn) {
           ctx.save();
           ctx.globalCompositeOperation = 'lighter';
@@ -9198,41 +9012,41 @@ window.Breakout = {
           ctx.restore();
         }
 
-        // 2. Exploding Aura
         if (explodingOn) {
           var tt = Date.now() * 0.01;
           ctx.save();
           ctx.globalAlpha = 0.35 + 0.25 * Math.sin(tt);
-          ctx.fillStyle = '#ff7a00';
           ctx.beginPath();
           ctx.arc(x, y, r + 3, 0, Math.PI * 2, false);
+          ctx.fillStyle = '#ff7a00';
           ctx.fill();
           ctx.restore();
         }
 
-        // 3. Fire Aura
         if (fireOn) {
           var ft = Date.now() * 0.016;
           var flick = 0.85 + 0.15 * Math.sin(ft);
           ctx.save();
           ctx.globalCompositeOperation = 'lighter';
-          
           ctx.globalAlpha = 0.35 * flick;
           ctx.fillStyle = '#ff7a00';
-          ctx.beginPath(); ctx.arc(x, y, r * 2.0, 0, Math.PI * 2, false); ctx.fill();
-          
+          ctx.beginPath();
+          ctx.arc(x, y, r * 2.0, 0, Math.PI * 2, false);
+          ctx.fill();
           ctx.globalAlpha = 0.45 * flick;
           ctx.fillStyle = '#ffd080';
-          ctx.beginPath(); ctx.arc(x, y, r * 1.4, 0, Math.PI * 2, false); ctx.fill();
+          ctx.beginPath();
+          ctx.arc(x, y, r * 1.4, 0, Math.PI * 2, false);
+          ctx.fill();
           ctx.restore();
         }
 
-        // 4. Lightning Arcs
         if (lightningOn) {
           ctx.save();
           ctx.strokeStyle = '#00FFFF';
           ctx.lineWidth = 2;
           ctx.beginPath();
+          // Draw 3 random sparks radiating from the ball center
           for (var k = 0; k < 3; k++) {
             var angle = Math.random() * Math.PI * 2;
             var dist = r * 1.6;
@@ -9247,54 +9061,56 @@ window.Breakout = {
           ctx.restore();
         }
 
-        // 5. Smash Ball Effects
         if (b.isSmashBall) {
+          // 1. Draw Speed Lines (Trails behind ball)
           ctx.save();
           ctx.translate(b.x, b.y);
-          var angle = Math.atan2(b.dy, b.dx);
+          var angle = Math.atan2(b.dy, b.dx); // Direction of motion
           ctx.rotate(angle);
 
-          // Speed Lines
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(-b.radius, -2); ctx.lineTo(-b.radius * 4, -4);
-          ctx.moveTo(-b.radius, 2); ctx.lineTo(-b.radius * 4, 4);
-          ctx.moveTo(-b.radius * 0.8, 0); ctx.lineTo(-b.radius * 5, 0);
+          // Draw three diverging lines pointing backward (-x)
+          ctx.moveTo(-b.radius, -2);
+          ctx.lineTo(-b.radius * 4, -4);
+          ctx.moveTo(-b.radius, 2);
+          ctx.lineTo(-b.radius * 4, 4);
+          ctx.moveTo(-b.radius * 0.8, 0);
+          ctx.lineTo(-b.radius * 5, 0);
           ctx.stroke();
-          
-          // White Hot Core
+          ctx.restore();
+
+          // 2. White Hot Glow
+          ctx.save();
           ctx.shadowColor = '#FFFFFF';
           ctx.shadowBlur = 20;
           ctx.fillStyle = '#FFFFFF';
-          ctx.beginPath(); ctx.arc(0, 0, b.radius, 0, Math.PI * 2); ctx.fill();
-          
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fill();
           ctx.restore();
-        } else {
-            // 6. Standard Ball (Cached Sprite)
-            // Use getSprite if available, otherwise fallback
-            if (this.getSprite) {
-                var sprite = this.getSprite(r);
-                var offset = r + 2; 
-                ctx.drawImage(sprite, x - offset, y - offset);
-            } else {
-                ctx.fillStyle = '#FFFFFF';
-                ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-            }
         }
+
+        // ---- C. The Ball Itself (OPTIMIZED) ----
+        // Instead of calculating gradients, we just draw the cached image!
+        var sprite = this.getSprite(r);
+        var offset = r + 2; // Compensate for the padding in the sprite
+        ctx.drawImage(sprite, x - offset, y - offset);
       }
 
-      // Overlays
       if (this.label && (this.countdown != null)) {
-        if (this.drawDogeOverlay) this.drawDogeOverlay(ctx);
-        if (this.drawAmongUsOverlay) this.drawAmongUsOverlay(ctx);
-        if (this.drawLaunchLabel) this.drawLaunchLabel(ctx);
+        this.drawDogeOverlay(ctx);
+        this.drawAmongUsOverlay(ctx);
+        this.drawLaunchLabel(ctx);
       }
 
-      ctx.restore(); // End Main Ball Draw
+      ctx.restore();
 
-      // Sudden Death Speed Clamp (Logic kept separate from Draw)
-      if (this.game && this.game.suddenDeath) {
+      // Sudden Death clamp (kept your logic)
+      (function suddenSpeedClamp() {
+        var g = this.game;
+        if (!g || !g.suddenDeath) return;
         for (let bi = 0; bi < this.balls.length; bi++) {
           var b = this.balls[bi];
           if (!b) continue;
@@ -9306,8 +9122,8 @@ window.Breakout = {
             b.dy *= k;
           }
         }
-      }
-    },
+      }).call(this);
+    }
   },
 
   //-----------------------------------------------------------------------------
@@ -9451,16 +9267,6 @@ window.Breakout = {
       }
       if (hitSpike) continue;
 
-      // BOSS COLLISION
-      if (this.court.boss && this.court.boss.active) {
-          var b = this.court.boss;
-          if (l.x >= b.x && l.x <= b.x + b.w &&
-              l.y >= b.y && l.y <= b.y + b.h) {
-              this.court.damageBoss(0.5); // Lasers are fast, low damage per hit
-              hit = true;
-          }
-      }
-
       // Brick Collision
       var hit = false;
       for (let n = 0; n < this.court.bricks.length && !hit; n++) {
@@ -9493,11 +9299,6 @@ window.Breakout = {
     initialize: function (game) {
       this.game = game;
       this.items = [];
-    },
-    spawnHit: function(x, y, color) {
-        if (this.spawn) {
-            this.spawn(x, y, color || '#FFFFFF', 10); // 10 particles
-        }
     },
     // Draws an expanding, fading ring. Call with particles.ring(x, y, {color, maxR, life})
     ring: function (x, y, opts) {
@@ -9540,6 +9341,7 @@ window.Breakout = {
     explode: function (brick, dir) {
       if (!brick || brick.hit) return;
 
+      // Optimization: Fixed low count (8-12 particles) regardless of brick size.
       // Previous code calculated areaUnits which could spike to 28+ particles.
       var count = 8 + Math.floor(Math.random() * 4);
 
@@ -9556,11 +9358,11 @@ window.Breakout = {
           vx: Math.cos(ang) * spd,
           vy: Math.sin(ang) * spd * 0.5 - chunk * 1.0, // Slight upward bias
 
-          // Shorter life = less overlap = higher FPS
+          // Optimization: Shorter life = less overlap = higher FPS
           life: 0.3 + Math.random() * 0.3,
           maxlife: 0.6,
 
-          // 'shard' draws a simple fillRect (fast) vs circle (slow)
+          // Optimization: 'shard' draws a simple fillRect (fast) vs circle (slow)
           kind: 'shard',
           w: size,
           h: size,
@@ -9646,10 +9448,14 @@ window.Breakout = {
         }
       }
 
+      // Batch 2: Shards/Sparks (The optimization)
       // We group them to avoid setting context state repeatedly
       ctx.save();
 
+      // Optimization: Don't use globalCompositeOperation 'lighter' for everything if not needed,
+      // but if we do, set it ONCE.
       // We will assume standard blending for performance unless 'burn' is active.
+
       for (let i = 0; i < this.items.length; i++) {
         var p = this.items[i];
         if (p.kind === 'ring') continue; // Already drawn
@@ -9668,13 +9474,13 @@ window.Breakout = {
       }
       ctx.restore();
     }
-  },
+  }
 }
 
 //=============================================================================
 // Background & Decoration System
 //=============================================================================
-// Animated Parallax Background
+// Animated Parallax Background (v27: Fixed Particle Coordinates)
 Breakout.BG = {
   initialize: function (game, cfg) {
     this.game = game;
@@ -10384,52 +10190,21 @@ Breakout.BG = {
     var P = (this.pulse || 0);
     var t = this.theme;
 
-    // --- 1. OPTIMIZED GRADIENTS (Cached) ---
-    // Check if we can reuse the existing gradients
-    if (!this._gradCache || this._gradCache.h !== h || this._gradCache.w !== w || this._gradCache.t !== t) {
-        this._gradCache = { h: h, w: w, t: t };
-        
-        if (t === 'synthwave') {
-             var horizonY = Math.floor(h * 0.65);
-             var gSky = ctx.createLinearGradient(0, 0, 0, horizonY);
-             gSky.addColorStop(0, '#2b003b');
-             gSky.addColorStop(0.6, '#5e0042');
-             gSky.addColorStop(1, '#ff6e7f');
-             this._gradCache.sky = gSky;
-
-             var gSea = ctx.createLinearGradient(0, horizonY, 0, h);
-             gSea.addColorStop(0, '#1a0b2e');
-             gSea.addColorStop(1, '#2b003b');
-             this._gradCache.sea = gSea;
-        } else {
-             var g = ctx.createLinearGradient(0, 0, 0, h);
-             if (t === 'city') {
-                g.addColorStop(0, '#001D37'); g.addColorStop(0.4, '#013155'); g.addColorStop(1, '#01162E');
-             } else if (t === 'space') {
-                g.addColorStop(0, '#010b19'); g.addColorStop(0.4, '#021631'); g.addColorStop(1, '#010b19');
-             } else if (t === 'forest') {
-                g.addColorStop(0, '#281f72'); g.addColorStop(0.4, '#EBD587'); g.addColorStop(1, '#6F624F');
-             } else if (t === 'circuit') {
-                g.addColorStop(0, '#000500'); g.addColorStop(0.5, '#001a00'); g.addColorStop(1, '#002200');
-             } else {
-                // Fallback
-                g.addColorStop(0, '#000'); g.addColorStop(1, '#000');
-             }
-             this._gradCache.main = g;
-        }
-    }
-
-    // --- DRAW BACKGROUND ---
+    // --- 1. GRADIENTS ---
     if (t === 'synthwave') {
       var horizonY = Math.floor(h * 0.65);
-      
-      // Use Cache
-      ctx.fillStyle = this._gradCache.sky;
+      var gSky = ctx.createLinearGradient(0, 0, 0, horizonY);
+      gSky.addColorStop(0, '#2b003b');
+      gSky.addColorStop(0.6, '#5e0042');
+      gSky.addColorStop(1, '#ff6e7f');
+      ctx.fillStyle = gSky;
       ctx.fillRect(0, 0, w, horizonY);
-      ctx.fillStyle = this._gradCache.sea;
+      var gSea = ctx.createLinearGradient(0, horizonY, 0, h);
+      gSea.addColorStop(0, '#1a0b2e');
+      gSea.addColorStop(1, '#2b003b');
+      ctx.fillStyle = gSea;
       ctx.fillRect(0, horizonY, w, h - horizonY);
 
-      // Stars (Synthwave)
       ctx.save();
       for (let i = 0; i < this.stars.length; i++) {
         var st = this.stars[i];
@@ -10446,7 +10221,6 @@ Breakout.BG = {
       }
       ctx.restore();
 
-      // Sun
       var sx = w * 0.5,
         sy = h * 0.40;
       var baseR = Math.min(w, h) * 0.18;
@@ -10474,8 +10248,25 @@ Breakout.BG = {
       ctx.fill();
       ctx.restore();
     } else {
-      // Non-Synthwave Backgrounds (Use Cache)
-      ctx.fillStyle = this._gradCache.main;
+      var g = ctx.createLinearGradient(0, 0, 0, h);
+      if (t === 'city') {
+        g.addColorStop(0, '#001D37');
+        g.addColorStop(0.4, '#013155');
+        g.addColorStop(1, '#01162E');
+      } else if (t === 'space') {
+        g.addColorStop(0, '#010b19');
+        g.addColorStop(0.4, '#021631');
+        g.addColorStop(1, '#010b19');
+      } else if (t === 'forest') {
+        g.addColorStop(0, '#281f72');
+        g.addColorStop(0.4, '#EBD587');
+        g.addColorStop(1, '#6F624F');
+      } else if (t === 'circuit') {
+        g.addColorStop(0, '#000500');
+        g.addColorStop(0.5, '#001a00');
+        g.addColorStop(1, '#002200');
+      }
+      ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
 
       // Stars
@@ -10615,6 +10406,7 @@ Breakout.BG = {
       ctx.save();
 
       // DRAW PARTICLES & TRAILS (BEFORE IMAGE)
+      // Fixed: Draw at pt.x, pt.y (World Coordinates)
       if (d.particles && d.particles.length) {
         for (var p = 0; p < d.particles.length; p++) {
           var pt = d.particles[p];
@@ -10633,7 +10425,7 @@ Breakout.BG = {
         ctx.translate(d.x, d.y);
       }
 
-      // APPLY HUE
+      // APPLY HUE (Only affects the image)
       if (d.hue !== undefined) {
         ctx.filter = 'hue-rotate(' + d.hue + 'deg)';
       }
@@ -10650,7 +10442,7 @@ Breakout.BG = {
 
       ctx.restore();
 
-      // DRAW LIGHTCYCLE TRAIL (In World Space)
+      // DRAW LIGHTCYCLE TRAIL (In World Space, after restore)
       if (d.effect === 'lightcycle' && d.trail && d.trail.length > 1) {
         ctx.save();
         ctx.shadowBlur = 15;
@@ -10683,7 +10475,7 @@ Breakout.BG = {
 
     // --- 6. CIRCUIT TRACERS ---
     if (this.theme === 'circuit') {
-      // PCB Traces
+      // PCB Traces (Background)
       ctx.save();
       ctx.shadowBlur = 5;
       ctx.shadowColor = '#0f0';
@@ -10703,7 +10495,7 @@ Breakout.BG = {
       }
       ctx.restore();
 
-      // Matrix Rain
+      // Matrix Rain (Midground)
       if (this.matrixCols.length) {
         ctx.save();
         ctx.font = "14px monospace";
@@ -10733,6 +10525,7 @@ Breakout.BG = {
       ctx.restore();
     }
   },
+
 
   mix: function (a, b, t) {
     function h2r(h) {
@@ -11281,7 +11074,7 @@ Breakout.BeatConductor = {
                   if (window.Breakout && window.Breakout.openLeaderboard) {
                     window.Breakout.openLeaderboard('global');
                   }
-			      resolve(true);
+                  resolve(true);
                 })
                 .catch(function () {
                   resolve(false);
@@ -11326,4 +11119,1589 @@ Breakout.audio = {
     this.setVolume(1); // 0–1 overall volume
     //this.audio.play(name);         // quick oscillator blips: 'brick', 'powerup', 'lose'
   },
-}
+},
+Breakout.Colors = {
+
+	hf: {
+		/* Reputation */
+		a: "#00B500", // rep green
+		b: "#FF2121", // rep red
+		/* Theme */
+		c: "#4d2f5d", // dark purple background
+		d: "#333333", // background gray
+		e: "#1F1F1F", // background dark gray
+		/* Groups */
+		f: "#fFcC00", // L33t yelLow
+		g: "#0066fF", // Ub3r blue
+		h: "#afaAaA", // R00t gray
+		i: "#ed1c24", // Sociopaths red
+		j: "#00cC66", // Divined green
+		k: "#99cCfF", // Staff blue
+		l: "#aA00fF", // Bots purple
+		m: "#2D7E52", // Vender green
+		n: "#9999FF", // Admin purple
+		o: "#fFcd94" // Skin tone
+	},
+
+	arkanoid: {
+		w: "#FCFCFC", // white
+		o: "#FC7460", // orange
+		l: "#3CBCFC", // light blue
+		g: "#80D010", // green
+		r: "#D82800", // red
+		b: "#0070EC", // blue
+		p: "#FC74B4", // pink
+		y: "#FC9838", // yelLow
+		s: "#BCBCBC", // silver
+		d: "#F0BC3C" // gold
+	},
+
+	pastel: {
+		y: "#FFF7A5", // yelLow
+		p: "#FFA5E0", // pink
+		b: "#A5B3FF", // blue
+		g: "#BFFFA5", // green
+		o: "#FFCBA5" // orange
+	},
+
+	vintage: {
+		a: "#EFD279", // yelLow
+		b: "#95CBE9", // light blue
+		c: "#024769", // dark blue
+		d: "#AFD775", // light green
+		e: "#2C5700", // grass
+		f: "#DE9D7F", // red
+		g: "#7F9DDE", // purple
+		h: "#00572C", // dark green
+		i: "#75D7AF", // mint
+		j: "#694702", // brown
+		k: "#E9CB95", // peach
+		l: "#79D2EF" // blue
+	},
+
+	liquidplanNer: {
+		a: '#62C4E7', // light blue
+		b: '#00A5DE', // dark  blue
+		x: '#969699', // light gray
+		y: '#7B797E' // dark  gray
+	},
+
+};
+
+Breakout.Levels = [
+
+	{
+		colors: {
+			a: '#000000', // black
+			b: '#C3FF00', // yelLow-greEn
+			c: '#00FFFF', // cyan
+			d: '#FF00FF', // magenta
+		}
+		, name: "Windows 93.11 by EnderAndrew"
+		, theme: "synthwave"
+		, bricks: [
+			"", ""
+			, "                aAaA         "
+			, "              aAaAaAaA       "
+			, "       a     aAabBbBaAa      "
+			, "       a a aAaAbaBbabAa      "
+			, "         aAaAaAbaBbabAa      "
+			, "       c     aAbBbBbBaA      "
+			, "       c c cCaAbBbBbBaA      "
+			, "         cCcCaAbabBabaA      "
+			, "       d     aAbBaAbBaA      "
+			, "       d d dDaAbBbBbBaA      "
+			, "         dDdDaAbaAaAbaA      "
+			, "       a     aAaAaAaAaA      "
+			, "       a a aAaAa    aAa      "
+			, "         aAaAa        a      "
+		, ]
+	},
+
+	{
+		colors: {
+			a: '#543746', // dark-purple
+			b: '#B97C1F', // brown
+			c: '#EDAE48', // light-brown
+			d: '#FEDDAD', // tan
+			e: '#887B66', // dark
+			f: '#DFD7AD', // light
+			g: '#DFD7AD', // white
+		}
+		, name: "DOGE! SUCH BREAKOUT!"
+		, theme: "city"
+		, bricks: [
+			"", "", ""
+			, "             aA   a   "
+			, "            adDaAada  "
+			, "            adcCcCca  "
+			, "            adcCcCcCa "
+			, "            acCcCcCaga"
+			, "        a  acCcCagcCca"
+			, "       ada acCfFcCcaAfa"
+			, "       adDacCcfFfFfFafa"
+			, "       acdabcCefFaAafFa"
+			, "        acCabBbefFfFfea"
+			, "         aAaAbBeEeEeEa"
+			, "            aAaAaAaAa "
+		, ]
+	},
+
+	{
+		colors: {
+			a: '#000000', // black
+			b: '#595656', // grey
+			c: '#FFFFFF', // white
+			d: '#962F4D', // pink
+			e: '#D8625D', // peach
+			f: '#915A73', // dark-lavender
+			g: '#B38D95', // light-lavender
+		}
+		, name: "Possie by EnderAndrew"
+		, theme: "forest"
+		, bricks: [
+			"", "", ""
+			, "         aA   aAaA           "
+			, "       aAbBaAabBbBa          "
+			, "      acbababBbBbBba         "
+			, "    aAcCcbBbBbBbBbBa    aAa  "
+			, "  aAcCcacCcbBbBbBbBba  agGga "
+			, "  adcCcCcCcCbBbBbBbBfaAagaga "
+			, "   aAcCcCcCbBbBbBbBbfFfaAaga "
+			, "     aAaAaAabBbBbBaAaAfFgGga "
+			, "        aeabBaeaBba   aAaAa  "
+			, "         aeEa aeEa           "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Pac-Man by EnderAndrew"
+		, theme: "synthwave"
+		, bricks: [
+			"", ""
+			, "     rrrr            yyyyy   "
+			, "   rrrrrrrr        yyyyyyyyy "
+			, "  rrrrrrrrrr     yyyyyyyyyyyy"
+			, " rwwrrrrwwrrr   yyyyyyyyyyyyy"
+			, " wwwwrrwwwwrr   yyyyyyyyyyyyyy"
+			, " lLwwrrlLwwrr     yyyyyyyyyyyy"
+			, "rlLwwrrlLwwrrr       yyyyyyyyy"
+			, "rrwwrrrrwwrrrr          yyyyyy"
+			, "rrrrrrrrrrrrrr       yyyyyyyyy"
+			, "rrrrrrrrrrrrrr    yyyyyyyyyyy"
+			, "rrrrrrrrrrrrrr  yyyyyyyyyyyyy"
+			, "rrrrrrrrrrrrrr  yyyyyyyyyyyy "
+			, "rrrr rrrr rrrr   yyyyyyyyyy  "
+			, " rr   rr   rr      yyyyy     "
+		, ]
+	},
+
+	{
+		colors: {
+			a: '#000000', // black
+			b: '#AC385D', // dark purple
+			c: '#B56BA6', // light purple
+			d: '#83978C', // grey
+			e: '#1B9BD8', // blue
+			f: '#FFFFFF', // white
+		}
+		, name: "Among Us by EnderAndrew"
+		, theme: "space"
+		, bricks: [
+			"", "", ""
+			, "         aAaA       a a      "
+			, "        acCaAa     afafa     "
+			, "       acCadefa    afFfa     "
+			, "      aAcCadeEa     afa      "
+			, "     acabcadDda     afa      "
+			, "     ababcCaAa  aAaAaAaAa    "
+			, "     ababBcCca  ababBcCca    "
+			, "     ababBbBba  ababBbBba    "
+			, "      aAbBbBba  aAabBbBba    "
+			, "       abBabBa    abBabBa    "
+			, "        aA aA      aA aA     "
+		, ]
+	},
+
+	{
+		colors: {
+			e: '#000000', // Black
+			w: '#FFFFFF', // White
+			b: '#FF0000', // Red
+			h: '#DDDDDD' // Light Grey (Button)
+		}
+		, name: "Catch 'em All"
+		, theme: "city"
+		, bricks: [
+			"                              "
+			, "                              "
+			, "             eEeE             "
+			, "           eEbBbBeE           "
+			, "          ewWbBbBbBe          "
+			, "         ewWbBbBbBbeE         "
+			, "         ewbBbBbBbBbe         "
+			, "        ewbBbBbBbBbBbe        "
+			, "        eEebBbBeEebBbe        "
+			, "        eEeEbBewWwebBe        "
+			, "        ehweEeEWhWeEeE        "
+			, "         ewWweEwWwewe         "
+			, "         eWwWwWeEewWe         "
+			, "          ehHWwWwWwe          "
+			, "           eEhHhHeE           "
+			, "             eEeE             "
+		]
+	},
+
+	{
+		colors: {
+			e: '#000000', // black
+			m: '#DB3C58', // magenta
+			o: '#E8B0CA', // pink
+		}
+		, name: "Poyo Kirby by EnderAndrew"
+		, theme: "forest"
+		, bricks: [
+			""
+			, "             eEeEe eE         "
+			, "           eEmoOomemoe        "
+			, "          emoOoOoOoeoOe       "
+			, "         emoOoeoeoOomoe       "
+			, "         eoOoOeoeoOomMe       "
+			, "        eoOoOoeoeoOoOme       "
+			, "       emoOomMoOomMoOoe       "
+			, "       eoOmoOoOeoOoOome       "
+			, "       eoOmoOoOeoOoOoe        "
+			, "        eEeoOoOoOoOome        "
+			, "       emMmeoOoOoOoOme        "
+			, "       emMmMeoOoOoOme         "
+			, "       emMmMeoOoOomeE         "
+			, "        emMmMemMmeEmMe        "
+			, "         emMeEeEemMmMme       "
+			, "          eEe   eEeEeE        "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Space Invaders"
+		, theme: "space"
+		, bricks: [
+			"", ""
+			, "          yy      yy          "
+			, "            yy  yy            "
+			, "            yy  yy            "
+			, "          ssSSssSSss          "
+			, "          ssSSssSSss          "
+			, "        SSsswwsswwssSS        "
+			, "        SSsswwsswwssSS        "
+			, "      ssSSssSSssSSssSSss      "
+			, "      ssSSssSSssSSssSSss      "
+			, "      ss  ssSSssSSss  ss      "
+			, "      ss  ss      ss  ss      "
+			, "      ss  ss      ss  ss      "
+			, "            ss  ss            "
+			, "            ss  ss            "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Retro by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			"", "", ""
+			, " wdw  wdwo ysdwo wdw    yp   d"
+			, " o  o o      l   o  o  s  b  s"
+			, " l  l l      g   l  l w    r y"
+			, " g  g g      r   g  g o    g p"
+			, " rbr  rlg    b   rbr  g    l b"
+			, " b p  b      p   b p  r    o r"
+			, " p  y p      y   p  y b    w g"
+			, " y  s y      s   y  s  p  d   "
+			, " s  d srbp   d   s  d   ys   l"
+		, ]
+	},
+
+	{
+		colors: {
+			s: '#C0C0C0', // Silver
+			g: '#FFD700', // Gold
+			b: '#4169E1', // Royal Blue
+			d: '#222222' // Dark Grey
+		}
+		, name: "It's Dangerous to go Alone"
+		, theme: "forest"
+		, bricks: [
+			"              s               "
+			, "              s               "
+			, "              s               "
+			, "              s               "
+			, "              s               "
+			, "              s               "
+			, "              s               "
+			, "              s               "
+			, "             dgd              "
+			, "            bbgbb             "
+			, "           bBbgbBb            "
+			, "          bBbBgBbBb           "
+			, "           d  b  d            "
+			, "              b               "
+			, "              b               "
+			, "              b               "
+			, "                              "
+		]
+	},
+
+	{
+		colors: {
+			c: '#00FFFF', // Cyan
+			w: '#FFFFFF', // White
+			b: '#0000CC' // Dark Blue (Pupils)
+		}
+		, name: "Inky"
+		, theme: "space"
+		, bricks: [
+			"                              "
+			, "           cccccccc           "
+			, "         cccccccccccc         "
+			, "        cccccccccccccc        "
+			, "       cccccccccccccccc       "
+			, "       ccwwbbccccwwbbcc       "
+			, "       ccwwbbccccwwbbcc       "
+			, "       ccwwbbccccwwbbcc       "
+			, "       cccccccccccccccc       "
+			, "       cccccccccccccccc       "
+			, "       cccccccccccccccc       "
+			, "       cccccccccccccccc       "
+			, "       cccccccccccccccc       "
+			, "       cc  cc    cc  cc       "
+			, "       c    c    c    c       "
+			, "                              "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Heart"
+		, theme: "forest"
+		, bricks: [
+			"                              "
+			, "                              "
+			, "                              "
+			, "          rpr     rpr         "
+			, "         rprpr   rprpr        "
+			, "        rprprpr rprprpr       "
+			, "        rprprprprprprpr       "
+			, "        rprprprprprprpr       "
+			, "         rprprprprprpr        "
+			, "          rprprprprpr         "
+			, "           rprprprpr          "
+			, "            rprprpr           "
+			, "             rprpr            "
+			, "              rpr             "
+			, "               r              "
+			, "                              "
+		, ]
+	},
+
+	{
+		colors: {
+			g: '#00AA00', // Green
+			l: '#55FF55', // Light Green
+			b: '#000000' // Black
+		}
+		, name: "Creeper by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			"          llllllllll          "
+			, "          llllllllll          "
+			, "        llggllggllggll        "
+			, "        llggllggllggll        "
+			, "        ggbbbggggbbbgg        "
+			, "        ggbbbggggbbbgg        "
+			, "        ggbbbggggbbbgg        "
+			, "        ggbbbggggbbbgg        "
+			, "        gggggbbbbggggg        "
+			, "        gggggbbbbggggg        "
+			, "        gggbbbbbbbbggg        "
+			, "        gggbbbbbbbbggg        "
+			, "        gggbbbbbbbbggg        "
+			, "        gggbbgGgGbbggg        "
+			, "        gggbbgGgGbbggg        "
+			, "                              "
+		]
+	},
+
+	{
+		colors: {
+			g: '#C0C0C0', // Grey Body
+			d: '#808080', // Dark Grey details
+			s: '#98A200', // Screen Green
+			b: '#222222', // Black/Dark Grey
+			r: '#8B0000' // Red buttons
+		}
+		, name: "Handheld '89"
+		, theme: "circuit"
+		, bricks: [
+			"      gggggggggggggggggg      "
+			, "      g                g      "
+			, "      g dddddddddddddd g      "
+			, "      g d            d g      "
+			, "      g d ssssssssss d g      "
+			, "      g d ssssssssss d g      "
+			, "      g d ssssssssss d g      "
+			, "      g d ssssssssss d g      "
+			, "      g d ssssssssss d g      "
+			, "      g d            d g      "
+			, "      g dddddddddddddd g      "
+			, "      g   no     no    g      "
+			, "      g                g      "
+			, "      g             r  g      "
+			, "      g  b        r   Gg      "
+			, "      g bbb          g g      "
+			, "      g  b          g gG     "
+			, "      g            g g g      "
+			, "      gggggggggggggggggg      "
+			, "                              "
+		]
+	},
+
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Classic Arkanoid"
+		, theme: "synthwave"
+		, bricks: [
+			""
+			, "oo"
+			, "ooll"
+			, "oollgg"
+			, "oollggbb"
+			, "oollggbbrr"
+			, "oollggbbrroo"
+			, "oollggbbrrooll"
+			, "oollggbbrroollgg"
+			, "oollggbbrroollggbb"
+			, "oollggbbrroollggbbrr"
+			, "oollggbbrroollggbbrroo"
+			, "oollggbbrroollggbbrrooll"
+			, "oollggbbrroollggbbrroollgg"
+			, "oollggbbrroollggbbrroollggbb"
+			, "ssSSssSSssSSssSSssSSssSSssSSrr"
+		]
+	},
+
+	{
+		colors: {
+			a: '#000000', // black
+			b: '#5E7985', // blue-grey
+			c: '#424242', // dark-grey
+			d: '#6F6F6F', // light-grey
+			e: '#FFFFFF', // white
+			f: '#9B2525', // red
+		}
+		, name: "NES Controller by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			""
+			, "          a                  "
+			, "          aA                 "
+			, "           a                 "
+			, "           aAa               "
+			, "             a               "
+			, "  bBbBbBbBbBbBbBbBbBbBbBbBb  "
+			, "  bcCcCcCcbBbBbBbcCcCcCcCcb  "
+			, "  bcCcCcCcCcCcCcCcCfFfFfcCb  "
+			, "  bcCcCcCcbBbBbBbcCcCcCcCcb  "
+			, "  bcCcCcCcCcCcCcCcCcCcCcCcb  "
+			, "  bcCbBbcCdDdDdDdcdDdDdDdcb  "
+			, "  bcbBdbBdeEeEeEedeEeEeEedb  "
+			, "  bcbdcdbdedDedDedefFefFedb  "
+			, "  bcbBdbBdeEeEeEedefFefFedb  "
+			, "  bcCbBbcCdDdDdDdceEeEeEedb  "
+			, "  bcCcCcCcbBbBbBbcdDdDdDdcb  "
+			, "  bBbBbBbBbBbBbBbBbBbBbBbBb  "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Arkanoid Umbrella"
+		, theme: "forest"
+		, bricks: [
+			"", ""
+			, "              ss              "
+			, "          bbBBssggGG          "
+			, "        BBbbWWwwWWGGgg        "
+			, "      bbBBwwWWwwWWwwggGG      "
+			, "      bbBBwwWWwwWWwwggGG      "
+			, "      bbBBwwWWwwWWwwggGG      "
+			, "      ss  ss  ss  ss  ss      "
+			, "              ss              "
+			, "              ss              "
+			, "          oo  oo              "
+			, "          ooOOoo              "
+			, "            OO                "
+		]
+	},
+
+	{
+		colors: {
+			a: '#22481C', // dark greEn
+			b: '#3C9D30', // light greEn
+			c: '#000000', // black
+			d: '#FFFFFF', // white
+			e: '#E9A3C0', // light pink
+			f: '#BF1864', // dark pink
+			g: '#643800', // brown
+			h: '#FDC98D' // tan
+		}
+		, name: "Grogu by EnderAndrew"
+		, theme: "space"
+		, bricks: [
+			""
+			, "            aAaAaA           "
+			, "           abBbBbBa          "
+			, "     aAabaAbBbBbBbBaAbaAa    "
+			, "     aAbBbacCcbBcCcabBbaA    "
+			, "     eEfbBbcCdbBcCdbBbfeE    "
+			, "      eEabBcCcbBcCcbBaeE     "
+			, "       eEaAbBbBbBbBaAeE      "
+			, "        cgGgGgGgGgGgGc       "
+			, "        chHhgGgGgGhHhc       "
+			, "         chgGgGgGgGhc        "
+			, "         chHghgGhghHc        "
+			, "         bchghgGhghcb        "
+			, "          chghgGhghc         "
+			, "          cgGhgGhgGc         "
+			, "           chHgGhHc          "
+			, "            cCcCcC           "
+		, ]
+	},
+
+	{
+		colors: {
+			a: '#000000', // black
+			b: '#797979', // dark-grey
+			c: '#BCBCBC', // light-grey
+			d: '#F7B606', // yelLow
+			e: '#F8D776', // light-yelLow
+			f: '#EFD1AD', // peach
+			g: '#0000BA', // blue
+			h: '#4228BD', // purple
+			i: '#4F3400', // dark-brown
+			j: '#AA7B09', // tan
+			k: '#FD3502', // red
+		}
+		, name: "Cloud Strife by EnderAndrew"
+		, theme: "city"
+		, bricks: [
+			""
+			, "              d              "
+			, "      a        dD            "
+			, "      aA       dDd   d       "
+			, "      baA     dDdDdDd        "
+			, "      baAa   dedDdDded       "
+			, "      baAaA d dedDdedDd      "
+			, "      cCaAaA dDdDfdDdDdD     "
+			, "       cCaAaAdDdDfdfdDd      "
+			, "        cCaAaAdDgfFgfd       "
+			, "         cCaAaAdfFfFfd       "
+			, "          cCaAaAfFfFfd       "
+			, "           cCaAaAhHb d       "
+			, "            cCaAbGgf         "
+			, "             cCbjgf          "
+			, "              b iji          "
+			, "                gGk          "
+			, "                g Gg         "
+			, "               aA  aA        "
+		, ]
+	},
+
+	{
+		colors: {
+			a: '#FFA32B', // orange
+			b: '#EB6307', // brown
+			c: '#C7E666', // greEn
+			d: '#FD3B11', // red
+			e: '#FFFFFF', // white
+		}
+		, name: "Link by EnderAndrew"
+		, theme: "forest"
+		, bricks: [
+			""
+			, "        cCcCcC      adDda    "
+			, "       cCcCcCcC     dadad    "
+			, "     a cbBbBbBc a  edDdDdDe  "
+			, "     a bBbBbBbB a  edaAadDe  "
+			, "     aAbacaAcabaA  edaAadDe  "
+			, "     aAbabaAbabaA   edadDe   "
+			, "      aAaAaAaAaAb   daAade   "
+			, "      cCaAbBaAcCb   adada    "
+			, "    bBbBbaAaAcCbBb  aedea    "
+			, "   bBabBbBcCcCcabB aedDdea   "
+			, "   baAabBabBcCaAab   ada e   "
+			, "   bBabBbacbBbBaAa   aAad    "
+			, "   bBabBbabBcCcCa    aA      "
+			, "   bBbBbBacCcCc      a       "
+			, "    aAaAab  bBb      a       "
+			, "       bBb           d       "
+		, ]
+	},
+
+	{
+		colors: {
+			b: '#111111', // black,
+			w: '#EEEEEE', // white,
+			c: '#EC7150', // cherry,
+			s: '#B33A2F' // shadow,
+		}
+		, name: "Cherries!"
+		, theme: "synthwave"
+		, bricks: [
+			""
+			, "       bBb                    "
+			, "      BcCcB                   "
+			, "     bCwCcsb  b               "
+			, "     bCcCcsb b                "
+			, "      BcCsB B                 "
+			, "    BbBsSsBbB       bBb       "
+			, "   bcCcbBbcCcb     BcCcB      "
+			, "  bcwcCsbcwcCsb   bCwCcsb  b  "
+			, "  bcCcCsbcCcCsb   bCcCcsb b   "
+			, "  bcCcsSbcCcsSb    BcCsB B    "
+			, "   bsSsb bsSsb   BbBsSsBbB    "
+			, "    bBb   bBb   bcCcbBbcCcb   "
+			, "               bcwcCsbcwcCsb  "
+			, "               bcCcCsbcCcCsb  "
+			, "               bcCcsSbcCcsSb  "
+			, "                bsSsb bsSsb   "
+			, "                 bBb   bBb    "
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+		, ]
+	},
+
+	{
+		colors: {
+			r: '#D80000', // red
+			b: '#706800', // brown
+			o: '#F8AB00', // orange
+			f: '#F83800', // fire
+			w: '#FFFFFF', // white
+			e: '#FFE0A8' // beige
+		}
+		, name: "My Boy Mario"
+		, theme: "city"
+		, bricks: [
+			""
+			, "    rRrRr                     "
+			, "   RrRrRrRrR                  "
+			, "   BbBoObo                    "
+			, "  boboOoboOo       F    f   f "
+			, "  bobBoOoboOo     f e         "
+			, "  bBoOoObBbB       F  f     e "
+			, "    oOoOoOo        Ff      E  "
+			, "   bBrbBb        E  f fF F  f "
+			, "  bBbrbBrbBb       FfFfFf  F  "
+			, " bBbBrRrRbBbB     fFeFeFfFf   "
+			, " oObrorRorboO    FfEeEeEfF    "
+			, " oOorRrRrRoOo    FeEeWwEeFf   "
+			, " oOrRrRrRrRoO   fFeFwWfEeFf   "
+			, "   rRr  RrR     fFeFwWfEeFf   "
+			, "  bBb    bBb    fFeEwWeEeFf   "
+			, " bBbB    bBbB   fFfEeEeEfF    "
+			, "                 FfFfFfFfF    "
+			, "                   FfFfF      "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Galaga by xadamxk"
+		, theme: "space"
+		, bricks: [
+			"     jJj    jJj    jJj        "
+			, "    jJfjJ  jJfjJ  jJfjJ       "
+			, "    jfFfj  jfFfj  jfFfj       "
+			, "    j   j  j   j  j   j       "
+			, "                              "
+			, "   b  b  b  b  b  b  b  b     "
+			, "   bnNb  bnNb  bnNb  bnNb     "
+			, "    nN    nN    nN    nN      "
+			, "   bnNb  bnNb  bnNb  bnNb     "
+			, "   b  b  b  b  b  b  b  b     "
+			, ""
+			, "             jJ               "
+			, "            jfFj              "
+			, "            jfFj              "
+			, "    ik      j  j      ki      "
+			, "  ifFfk     j  j     kfFfi    "
+			, "  kfFfFk   g    g   kfFfFk    "
+			, "   kfFf     gGgG     fFfk     "
+			, "    kf    g      g    fk      "
+			, "           g    g             "
+			, "         g  gGgG  g           "
+			, "          g      g            "
+			, "           gGgGgG             "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.vintage
+		, name: "Tetris by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			""
+			, "            e                "
+			, "            eE               "
+			, "             e               "
+			, "                             "
+			, "                             "
+			, "         aAa                 "
+			, "         akf  l      kK      "
+			, "     gG eEkfF lLl   lkKea    "
+			, "     gGeElkKfgGafFflLeEea    "
+			, "     fFflLlegGaAafelgGgaA    "
+			, "     fkaAfeEekKkKleEfFgkK    "
+			, "     kKaAflLlaAfFleafFkKf    "
+			, "     kleEfFlaAeEflaAgeEef    "
+			, "     lLleEgGgGeEflagGgefF    "
+		, ]
+	},
+
+	{
+		colors: {
+			a: '#000000', // black
+			b: '#FFFF00', // yelLow
+			c: '#FF0000', // red
+			d: '#742806', // brown
+			e: '#338715', // greEn
+			f: '#FFE9D1', // peach
+			g: '#FFFFFF', // white
+		}
+		, name: "I Choose You by EnderAndrew"
+		, theme: "forest"
+		, bricks: [
+			"", ""
+			, "     aAaAaA                 "
+			, "    agGcCcCa                "
+			, "   aegGcCcCca          aA   "
+			, "  aAegGcCcCca       aAaAaAaAa"
+			, " acCgGgcCcCaAa   aAabBaAabBba"
+			, "  aAfFfaAaAaAa  abBbBbBabBba"
+			, "   afafFaAaAaA abBbBbBaAbBa "
+			, "   afafFafFaA  abBbBbBabBa  "
+			, "   afFfFfFfa  abBabBbBbabaAa"
+			, "    afFfFaAea abBbBcbBbabBba"
+			, "     aAaAaeEa  abBbBbdDdada "
+			, "      aAfFaea  ababBbBbBadDa"
+			, "      aAfFaea  abaAbBdDdada "
+			, "     aAaAaAa   abBbBbBbaAa  "
+			, "     agGgGa     aAbBbaA     "
+			, "      aAaA        aAa       "
+		, ]
+	},
+
+	{
+		colors: {
+			a: '#E3C697', // tan
+			b: '#000000', // black
+			c: '#FFFFFF', // white
+			d: '#416999', // blue
+			e: '#BE2F37', // red
+			f: '#FEC23C', // orange
+		}
+		, name: "Dig Dug by EnderAndrew"
+		, theme: "synthwave"
+		, bricks: [
+			""
+			, "aAaAaAaAaAaAaAaAaAaAaAaAaAaAaA"
+			, "aAaAaAaAaAaAaAaAaAaAaAaAaAaAaA"
+			, "aAbBbBbBbaAaAaAaAaAaAabBbBbBaA"
+			, "bBbBcCcbBbaAaAaAaAaAbBbeEeEbBa"
+			, "bBcCcCcCbBbaAaAaAaAabBfcbfeEbB"
+			, "bcCcCcCcCcbaAaAaAaAbBfcCbcfeEb"
+			, "cCcCcCcCcCbBaAaAaAabfFbBbcCfeE"
+			, "cCcdDdbdbdbBbBbBbBbBefcCcCcCce"
+			, "cCcCdDbdbdbBbBbBbBbBeEfcCbBbcf"
+			, "bcdDdDdDdbebBbBbBbBbeEefcbcCfF"
+			, "bcbBcCcCcbeEbBbfFbBbfeEefFfFfF"
+			, "eEedDdeEeEeEefFbBfbfbeEeEefefF"
+			, "bcCcdDdcCbeEbBbBbBfbBbeEeEeEef"
+			, "bcCcCcCcbBebBbBbBbBbBbBefeEecf"
+			, "bcCcbBcCbBbBbBbBbBbBbBbBfbBbcb"
+			, "bBcCcbcCcbBbaAaAaAaAabBfFfbBbc"
+			, "aAaAaAaAaAaAaAaAaAaAaAaAaAaAaA"
+		, ]
+	},
+
+	{
+		colors: {
+			a: '#000000', // black
+			b: '#FF0000', // red
+			c: '#FF9900', // orange
+			d: '#EFE305', // yelLow
+			e: '#00FF00', // greEn
+			f: '#0000FF', // blue
+			g: '#9900FF', // purple
+			h: '#666666', // grey
+			i: '#C98F4C', // tan
+			j: '#FF949D', // pink
+			k: '#FFFFFF', // white
+		}
+		, name: "Nyan Cat by EnderAndrew"
+		, theme: "city"
+		, bricks: [
+			""
+			, "bB       aAaAaAaAaAaAaA      "
+			, "bBbBbBbBaiIiIiIiIiIiIiIa     "
+			, "cCbBbBbaiIjJjJgjJgjJjiIia    "
+			, "cCcCcCcaijJgjJjJaAjJjJjia aA "
+			, "daAaAcCaijJjJjJahHajJgjiaAhHa"
+			, "ahHhaAaAijJjJjJahHhajJjiahHha"
+			, "aAhHhHhaijJjgjJahHhHaAaihHhHa"
+			, "eEaAaAhaijJjJjJahHhHhHhHhHhHa"
+			, "fFfFfaAaijJjJgahHhkahHhHhkahHa"
+			, "fFfFfFfaijgjJjahHhaAhHhahaAhHa"
+			, "gGfFfFfaijJjgjahjJhHhHhHhHhjJa"
+			, "gGgGgGaAiIjgjJahjJhahHahHahjJa"
+			, "  gGaAaAiIijJjJahHhaAaAaAahHa"
+			, "   ahHhaAiIiIiIiahHhHhHhHhHa "
+			, "   ahHa aAaAaAaAaAaAaAaAaAa  "
+			, "   aAa   ahHa   ahHa ahHa    "
+			, "          aAa    aAa  aAa    "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Portal by Adam"
+		, theme: "space"
+		, bricks: [
+			" fF                        kK "
+			, " fF                        kK "
+			, " fF                        kK "
+			, " fF   hH                   kK "
+			, " fF  hHhH                  kK "
+			, " fF  hHhH                  kK "
+			, " fFh  hH                   kK "
+			, " fFhHh                     kK "
+			, " fFhHhH                hH hkK "
+			, " fFhHhHhH             hHhHhkK "
+			, " fFhHh hHh           hHh hHkK "
+			, " fFhH   hHh         hHh  hHkK "
+			, " fFhH    hH          h   hHkK "
+			, " fFh                     hHkK "
+			, " fFhH               h   hHhkK "
+			, " fF hH             hHh hHhHkK "
+			, " fF  hH             hHhHh hkK "
+			, " fF hH               hHh   kK "
+			, " fFhH                 h    kK "
+			, " fF                        kK "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Nintendo 64 by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			"            kKkKk             "
+			, "         nNcknNnkcnN          "
+			, "        kKkKkKkKkKkKk         "
+			, "       kncnkKkKkKknfnk        "
+			, "       kcCckKkKkKkfnfk        "
+			, "       kncnkKkbkKjnfnk        "
+			, "       nkKkKkKkKkKgkKn        "
+			, "       knkKkKcCckKkKnk        "
+			, "       kKnNnkcncknNnkK        "
+			, "       kKk  ncCcn  kKk        "
+			, "       kKk  nkKkn  kKk        "
+			, "       nkn   kKk   nkn        "
+			, "        n    kKk    n         "
+			, "             nknh             "
+			, "              n h             "
+			, "                hHh           "
+			, "                  h           "
+			, "                  hH          "
+			, "                   hH         "
+			, "                    hH        "
+			, "                     h        "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "GameCube by EnderAndrew"
+		, theme: "synthwave"
+		, bricks: [
+			"           gGgGgGg            "
+			, "       gGgGgkKkKkgGgGg        "
+			, "      gkKkgGgGgGgGghHkg       "
+			, "     gk h kgGghgGgkKjJhg      "
+			, "     gkhHhkgGgGgGgbkaAhg      "
+			, "     gk h kKg   gkKkKkKg      "
+			, "     gGkKkKhkg gfofkKkgG      "
+			, "     gGgGkhHhg goOokgGgG      "
+			, "     gGg gkhkg gfofg gGg      "
+			, "     gGg  gGg   gGG  gGg      "
+			, "     gGg        h    gGg      "
+			, "      g         hH    g       "
+			, "                 hH           "
+			, "                  hH          "
+			, "                   hH         "
+			, "                    h         "
+			, "                    hH        "
+			, "                     h        "
+			, "                     h        "
+			, "                     hH       "
+			, "                      h       "
+			, "                      h       "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "AOL by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			"                              "
+			, "                              "
+			, "       gGg                    "
+			, "      gfFfg                   "
+			, "      gfFfg                   "
+			, "      gfFfg                   "
+			, "      gGgGg                   "
+			, "     gfFfFgGg                 "
+			, "     gfFfFfFg  gG   gG  g     "
+			, "    gfFfgfFfg g  g g  g g     "
+			, "    gfFfFgGg  g  g g  g g     "
+			, "   gfFfFfFg   g  g g  g g     "
+			, "  gfFfgGfFg   gGgG g  g g     "
+			, "  gfFg  gfFg  g  g g  g g     "
+			, "   gG    gG   g  g  gG  gGgG  "
+		, ]
+	},
+
+	{
+		colors: {
+			w: '#F2F2F2', // White/Bone
+			g: '#BDC3C7', // Grey/Shadow
+			k: '#000000' // Black holes
+		}
+		, name: "Bad to the Bone"
+		, theme: "synthwave"
+		, bricks: [
+			"                              "
+			, "     wwwww          wwwww     "
+			, "   wwwwwwwww      wwwwwwwww   "
+			, "  wwwwwwwwwww    wwwwwwwwwww  "
+			, " wwwwwwwwwwwww  wwwwwwwwwwwww "
+			, " wwkkwwwwwkkww  wwkkwwwwwkkww "
+			, " wwkkwwwwwkkww  wwkkwwwwwkkww "
+			, " wwwwwwwwwwwww  wwwwwwwwwwwww "
+			, "  wwwwwkwwwww    wwwwwkwwwww  "
+			, "  wwwwwkwwwww    wwwwwkwwwww  "
+			, "   wwwwwwwww      wwwwwwwww   "
+			, "   ggwgwgwgg      ggwgwgwgg   "
+			, "   gwgwgwgwg      gwgwgwgwg   "
+			, "                               "
+		]
+	},
+
+	{
+		colors: {
+			o: '#000000', // Black
+			g: '#00008B', // Dark Blue
+			f: '#C0C0C0', // Silver
+			k: '#ADD8E6', // Light Blue
+		}
+		, name: "Save Icon by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			"                              "
+			, "                              "
+			, "      ogGgoOofFfFfFfgGg       "
+			, "      ogGgoOofFfFoOfgGg       "
+			, "      ogGgoOofFfFoOfgGg       "
+			, "      ogGgoOofFfFoOfgGg       "
+			, "      ogGgoOofFfFfFfgGg       "
+			, "      ogGgGgGgGgGgGgGgG       "
+			, "      ogGkKkKkKkKkKkKgG       "
+			, "      ogGkKkKkKkKkKkKgG       "
+			, "      ogGkKgGgGgGgGkKgG       "
+			, "      ogGkKkKkKkKkKkKgG       "
+			, "      ogGkKkKkKkKkKkKgG       "
+			, "      ogGkKgGgGgGgGkKgG       "
+			, "      ogGkKkKkKkKkKkKgG       "
+			, "      ogGkKkKkKkKkKkKgG       "
+			, "      ogokKkKkKkKkKkKog       "
+			, "      ogGkKkKkKkKkKkKgG       "
+			, "      ogGkKkKkKkKkKkKgG       "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Frog by Mix3rz"
+		, theme: "forest"
+		, bricks: [
+			"                              "
+			, "                              "
+			, "                              "
+			, "         dDd      dDd         "
+			, "        dfFfd    dfFfd        "
+			, "       dfdDfFdDdDfFdDfd       "
+			, "       dfdDfFaAaAfFdDfd       "
+			, "       dfFfFfaAaAfFfFfd       "
+			, "        dfFfaAaAaAfFfd        "
+			, "       daAaAaAaAaAaAaAd       "
+			, "      daAdaAaAaAaAaAdaAd      "
+			, "      daAadDdDdDdDdDaAad      "
+			, "       daAaAaAaAaAaAaAd       "
+			, "        dDdaAaAaAaAdDd        "
+			, "         daAaAaAaAaAd         "
+			, "       dDaAaAamMaAaAadD       "
+			, "      dmdaAaAmMmMaAaAdmd      "
+			, "      dmMmdmdmMmMdmdmMmd      "
+			, "       dDd d dDdD d dDd       "
+			, "                              "
+			, "                              "
+			, "                              "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Ace of Spades by Mix3rz"
+		, theme: "city"
+		, bricks: [
+			"                              "
+			, "  e                           "
+			, " e e         dD               "
+			, " eEe        dDeE              "
+			, " e e       deEeEe             "
+			, "           dEeEeE             "
+			, "          dEeEeEeE            "
+			, "          dEeEeEeE            "
+			, "         dEeEeEeEeE           "
+			, "         dEeEeEeEeE           "
+			, "        dEeEeEeEeEeE          "
+			, "        dEeEeEeEeEeE          "
+			, "       dEeEeEeEeEeEeE         "
+			, "       dEeEeEeEeEeEeE         "
+			, "             eE               "
+			, "            eEeE              "
+			, "           eEeEeE             "
+			, "          eEeEeEeE        e e "
+			, "          eEeEeEeE        eEe "
+			, "                          e e "
+			, "                           e  "
+			, "                              "
+		]
+	},
+
+	{
+		colors: {
+			a: '#7FFD44', // light greEn
+			b: '#56B428', // greEn
+			c: '#AE7349', // tan
+			d: '#7A4E33', // brown
+			e: '#5A3724', // dark brown
+			f: '#A19B9B', // light grey
+			g: '#665C64', // dark grey
+		}
+		, name: "Minecraft by EnderAndrew"
+		, theme: "forest"
+		, bricks: [
+			""
+			, "       aAabBabaAaAaAaba      "
+			, "       aAaAaebBbaAabaAa      "
+			, "       aeabBebeaAaAebBe      "
+			, "       egeEbeEebebedeEd      "
+			, "       cdcCecCceEegdced      "
+			, "       decCeceEedDedDdc      "
+			, "       cedDfdDcCdcCdcdc      "
+			, "       cdcCcCdDcCcCdDcC      "
+			, "       cdDcdcdcdcCdDded      "
+			, "       cCedDeEdDdDdcCdc      "
+			, "       cCdcCdcCcCcdcCfd      "
+			, "       cdDcCcdcgcCdecde      "
+			, "       decdcCcdDdDdDdcC      "
+			, "       dcdDedcCdecedcCc      "
+			, "       cdecdcdcdDdedDcC      "
+			, "       cdcCcdgcCcdDcCde      "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Pyramid"
+		, theme: "circuit"
+		, bricks: [
+			"                              "
+			, "               d              "
+			, "              d d             "
+			, "             r S r            "
+			, "            r r r r           "
+			, "           r r S r r          "
+			, "          r r r r r r         "
+			, "         r r S r r S r        "
+			, "        r r r r r r r r       "
+			, "       r r S r r S r r S      "
+			, "      r r r r r r r r r r     "
+			, "     r r S r r S r r S r r    "
+			, "    r r r r r r r r r r r r   "
+			, "   r r S r r S r r S r r S r  "
+			, "  r r r r r r r r r r r r r r "
+			, "                              "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.pastel
+		, name: "Six Pack"
+		, theme: "circuit"
+		, bricks: [
+			"", ""
+			, "  yyYYyyYYyyYY  YYyyYYyyYYyy  "
+			, "  bbBBbbBBbbBB  BBbbBBbbBBbb  "
+			, "  ggGGggGGggGG  GGggGGggGGgg  "
+			, "  ooOOooOOooOO  OOooOOooOOoo  "
+			, "", ""
+			, "  yyYYyyYYyyYY  YYyyYYyyYYyy  "
+			, "  bbBBbbBBbbBB  BBbbBBbbBBbb  "
+			, "  ggGGggGGggGG  GGggGGggGGgg  "
+			, "  ooOOooOOooOO  OOooOOooOOoo  "
+			, "", ""
+			, "  yyYYyyYYyyYY  YYyyYYyyYYyy  "
+			, "  bbBBbbBBbbBB  BBbbBBbbBBbb  "
+			, "  ggGGggGGggGG  GGggGGggGGgg  "
+			, "  ooOOooOOooOO  OOooOOooOOoo  "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.vintage
+		, name: "Louvre Inverted Pyramid"
+		, theme: "city"
+		, bricks: [
+			"", "", ""
+			, "   AAaaAAaaAAaaAAaaAAaaAAaa   "
+			, "    BBbbBBbbBBbbBBbbBBbbBB    "
+			, "     CCccCCccCCccCCccCCcc     "
+			, "      DDddDDddDDddDDddDD      "
+			, "       EEeeEEeeEEeeEEee       "
+			, "        FFffFFffFFffFF        "
+			, "         GGggGGggGGgg         "
+			, "          HHhhHHhhHH          "
+			, "           IIiiIIii           "
+			, "            JJjjJJ            "
+			, "             KKkk             "
+			, "              LL              "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.vintage
+		, name: "Love Triangles"
+		, theme: "forest"
+		, bricks: [
+			"", ""
+			, "  aabbccddeeffggFFEEDDCCBBAA  "
+			, "   aabbccddeeffFFEEDDCCBBAA   "
+			, "    aabbccddeeffEEDDCCBBAA    "
+			, "     aabbccddeeEEDDCCBBAA     "
+			, "      aabbccddeeDDCCBBAA      "
+			, "       aabbccddDDCCBBAA       "
+			, "        aabbccddCCBBAA        "
+			, "         aabbccCCBBAA         "
+			, "          aabbccBBAA          "
+			, "      hh   aabbBBAA   hh      "
+			, "     hhHH   aabbAA   hhHH     "
+			, "    hhiiHH   aaAA   hhiiHH    "
+			, "   hhiiIIHH   aa   hhiiIIHH   "
+			, "  hhiijjIIHH      hhiijjIIHH  "
+			, " hhiijjJJIIHH    hhiijjJJIIHH "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.pastel
+		, name: "You've Got Mail"
+		, theme: "circuit"
+		, bricks: [
+			"                              "
+			, "                              "
+			, "  bbBBbbBBbbBBbbBBbbBBbbBBbb  "
+			, "  ooyyYYyyYYyyYYyyYYyyYYyyoo  "
+			, "  ooyyYYyyYYyyYYyyYYyyYYyyoo  "
+			, "  ooOOYYyyYYyyYYyyYYyyYYOOoo  "
+			, "  ooOOooyyYYyyYYyyYYyyooOOoo  "
+			, "  oobbooOOYYyyYYyyYYOOoobboo  "
+			, "  oobbBBOOooyyYYyyooOOBBbboo  "
+			, "  ooppBBbbOOooYYooOObbBBppoo  "
+			, "  ooppPPbbBBooOOooBBbbPPppoo  "
+			, "  ooppPPppBBbbOObbBBppPPppoo  "
+			, "  ooppPPppPPbbBBbbPPppPPppoo  "
+			, "  ooppPPppPPppBBppPPppPPppoo  "
+			, "  ooppPPppPPppPPppPPppPPppoo  "
+			, "  ooggGGggGGggGGggGGggGGggoo  "
+			, "  ooggGGggGGggGGggGGggGGggoo  "
+			, "  bbBBbbBBbbBBbbBBbbBBbbBBbb  "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Crossfire"
+		, theme: "space"
+		, bricks: [
+			" S S S r r r r r r r r r S S S S"
+			, "r S S S r r r r r r r r S S S S "
+			, " S r S S r r r r r r r S S S S S"
+			, "S S S r S r r r r r r S S S S S "
+			, " S S S S r r r r r r S S S S S  "
+			, "  S S S S r r r r r S S S S S   "
+			, "   S S S S r r r r S S S S S    "
+			, "    S S S S r r r S S S S S     "
+			, "     S S S S r r S S S S S      "
+			, "      S S S S r S S S S S       "
+			, "       r r r r S r r r r        "
+			, "        S S S S r S S S         "
+			, "                           "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Chevron"
+		, theme: "city"
+		, bricks: [
+			"                              "
+			, "i     i     i     i     i     "
+			, " j   j j   j j   j j   j j   j"
+			, "  k k   k k   k k   k k   k k "
+			, "   l     l     l     l     l  "
+			, "    m   m m   m m   m m   m   "
+			, "     n n   n n   n n   n n    "
+			, "      f     f     f     f     "
+			, "     n n   n n   n n   n n    "
+			, "    m   m m   m m   m m   m   "
+			, "   l     l     l     l     l  "
+			, "  k k   k k   k k   k k   k k "
+			, " j   j j   j j   j j   j j   j"
+			, "i     i     i     i     i     "
+			, "                              "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Pillars"
+		, theme: "forest"
+		, bricks: [
+			"                              "
+			, " i  i  i  i  i  i  i  i  i  i "
+			, " j  j  j  j  j  j  j  j  j  j "
+			, " k  k  k  k  k  k  k  k  k  k "
+			, " l  l  l  l  l  l  l  l  l  l "
+			, " m  m  m  m  m  m  m  m  m  m "
+			, " m  m  m  m  m  m  m  m  m  m "
+			, " l  l  l  l  l  l  l  l  l  l "
+			, " k  k  k  k  k  k  k  k  k  k "
+			, " j  j  j  j  j  j  j  j  j  j "
+			, " i  i  i  i  i  i  i  i  i  i "
+			, "                              "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "T-Rings"
+		, theme: "city"
+		, bricks: [
+			"n n n n n n n n n n n n n n n"
+			, " k                          k"
+			, "  i                        i "
+			, "   j                      j  "
+			, "    l                    l   "
+			, "     m m m m m m m m m m m  "
+			, "    l                    l   "
+			, "   j                      j  "
+			, "  i                        i "
+			, " k                          k"
+			, "n n n n n n n n n n n n n n n"
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "The Wall"
+		, theme: "circuit"
+		, bricks: [
+			"r r r r r r r r r r r r r r r r r r r r r r r r r r r r r r "
+			, "o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o "
+			, "l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "r r r r r r r r r r r r r r r r r r r r r r r r r r r r r r "
+			, "o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o "
+			, "l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "r r r r r r r r r r r r r r r r r r r r r r r r r r r r r r "
+			, "o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o "
+			, "l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
+			, "                              "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Checkerboard"
+		, theme: "city"
+		, bricks: [
+			"                              "
+			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
+			, "S r S r S r S r S r S r S r S r S r S r S r S r S r S r S r "
+			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
+			, "S l S l S l S l S l S l S l S l S l S l S l S l S l S l S l "
+			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
+			, "S r S r S r S r S r S r S r S r S r S r S r S r S r S r S r "
+			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
+			, "S l S l S l S l S l S l S l S l S l S l S l S l S l S l S l "
+			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
+			, "                              "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Tunnel Vision"
+		, theme: "space"
+		, bricks: [
+			"S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "S r r r r r r r r r r r r r r r r r r r r r r r r r r r r S "
+			, "S r S S S S S S S S S S S S S S S S S S S S S S S S S S r S "
+			, "S r S l l l l l l l l l l l l l l l l l l l l l l l l S r S "
+			, "S r S l S S S S S S S S S S S S S S S S S S S S S S S l S r S "
+			, "S r S l S o o o o o o o o o o o o o o o o o o o o o S l S r S "
+			, "S r S l S o S S S S S S S S S S S S S S S S S S S o S l S r S "
+			, "S r S l S o S y y y y y y y y y y y y y y y y y S o S l S r S "
+			, "S r S l S o S y S             S y S o S l S r S "
+			, "S r S l S o S y S S S S S S S S S S S S S S S y S o S l S r S "
+			, "S r S l S o S y y y y y y y y y y y y y y y y y S o S l S r S "
+			, "S r S l S o S S S S S S S S S S S S S S S S S S S o S l S r S "
+			, "S r S l l l l l l l l l l l l l l l l l l l l l l l l S r S "
+			, "S r S S S S S S S S S S S S S S S S S S S S S S S S S S S r S "
+			, "S r r r r r r r r r r r r r r r r r r r r r r r r r r r r S "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "                              "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "The Box"
+		, theme: "forest"
+		, bricks: [
+			"r S o l l l l l l l l l l l l l l l l l l l l l l l o S r "
+			, "r S o l y y y y y y y y y y y y y y y y y y y y y l o S r "
+			, "r S o l y g g g g g g g g g g g g g g g g g g y l o S r "
+			, "r S o l y g b b b b b b b b b b b b b b b b g y l o S r "
+			, "r S o l y g b p p p p p p p p p p p p p p b g y l o S r "
+			, "r S o l y g b p w w w w w w w w w w w w p b g y l o S r "
+			, "r S o l y g b p w S S S S S S S S S S w p b g y l o S r "
+			, "r S o l y g b p w S r r r r r r r r S w p b g y l o S r "
+			, "r S o l y g b p w S r l l l l l l r S w p b g y l o S r "
+			, "r S o l y g b p w S r l o o o l r S w p b g y l o S r "
+			, "r S o l y g b p w S r l l l l l l r S w p b g y l o S r "
+			, "r S o l y g b p w S r r r r r r r r S w p b g y l o S r "
+			, "r S o l y g b p w S S S S S S S S S S w p b g y l o S r "
+			, "r S o l y g b p w w w w w w w w w w w w p b g y l o S r "
+			, "r S o l y g b b b b b b b b b b b b b b b b g y l o S r "
+			, "r S o l y g g g g g g g g g g g g g g g g g g y l o S r "
+			, "r S o l y y y y y y y y y y y y y y y y y y y y y l o S r "
+			, "r S o l l l l l l l l l l l l l l l l l l l l l l l l o S r "
+			, "r S o o o o o o o o o o o o o o o o o o o o o o o o o S r "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Play a Game"
+		, theme: "circuit"
+		, bricks: [
+			"m l m l m l m l m l m l m l m l"
+			, "n k n k n k n k n k n k n k n k"
+			, "m l m l m l m l m l m l m l m l"
+			, "n k n k n k n k n k n k n k n k"
+			, "m l m l m l m l m l m l m l m l"
+			, "n k n k n k n k n k n k n k n k"
+			, "m l m l m l m l m l m l m l m l"
+			, "n k n k n k n k n k n k n k n k"
+			, "m l m l m l m l m l m l m l m l"
+			, "n k n k n k n k n k n k n k n k"
+			, "m l m l m l m l m l m l m l m l"
+			, "n k n k n k n k n k n k n k n k"
+		, ]
+	},
+
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "The Grid"
+		, theme: "synthwave"
+		, bricks: [
+			"S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "S r o l y g b p S r o l y g b p S r o l y g b p S r o l y S "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "S o r l y g b p S o r l y g b p S o r l y g b p S o r l y S "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "S l o r y g b p S l o r y g b p S l o r y g b p S l o r y S "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "S y g b p r o l S y g b p r o l S y g b p r o l S y g b p S "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "S g b p r o l y S g b p r o l y S g b p r o l y S g b p r S "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "S b p r o l y g S b p r o l y g S b p r o l y g S b p r o S "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+			, "S p r o l y g b S p r o l y g b S p r o l y g b S p r o l S "
+			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Wavy Walls"
+		, theme: "city"
+		, bricks: [
+			"G G G G G G G G G G G G G G G "
+			, " y y y y y y y y y y y y y y y"
+			, "G G G G G G G G G G G G G G G "
+			, " y y y y y y y y y y y y y y y"
+			, " G G G G G G G G G G G G G G G"
+			, "  y y y y y y y y y y y y y y "
+			, " G G G G G G G G G G G G G G G"
+			, "  y y y y y y y y y y y y y y "
+			, " G G G G G G G G G G G G G G G"
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "The Checker"
+		, theme: "space"
+		, bricks: [
+			"R Y R Y R Y R Y R Y R Y R Y R Y "
+			, " Y R Y R Y R Y R Y R Y R Y R Y R"
+			, "R Y R Y R Y R Y R Y R Y R Y R Y "
+			, " Y R Y R Y R Y R Y R Y R Y R Y R"
+			, "R Y R Y R Y R Y R Y R Y R Y R Y "
+			, " Y R Y R Y R Y R Y R Y R Y R Y R"
+			, "R Y R Y R Y R Y R Y R Y R Y R Y "
+			, " Y R Y R Y R Y R Y R Y R Y R Y R"
+			, "r y r y r y r y r y r y r y r y "
+			, " y r y r y r y r y r y r y r y r"
+			, "r y r y r y r y r y r y r y r y "
+			, " y r y r y r y r y r y r y r y r"
+			, "r y r y r y r y r y r y r y r y "
+			, " y r y r y r y r y r y r y r y r"
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+			, "                              "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Waterfall"
+		, theme: "forest"
+		, bricks: [
+			"S r r r r S r r r r S r r r r S r r r r S "
+			, " l l l l   l l l l   l l l l   l l l l    "
+			, "  o o o o S o o o o S o o o o S o o o o S "
+			, "   w w w   w w w   w w w   w w w          "
+			, "S r r r r S r r r r S r r r r S r r r r S "
+			, " l l l l   l l l l   l l l l   l l l l    "
+			, "  o o o o S o o o o S o o o o S o o o o S "
+			, "   w w w   w w w   w w w   w w w          "
+			, "S r r r r S r r r r S r r r r S r r r r S "
+			, " l l l l   l l l l   l l l l   l l l l    "
+			, "                              "
+		, ]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Test"
+		, theme: "space"
+		, bricks: [
+			"fffffFFFFFfffffFFFFFfffffFFFFf"
+			, "ggGggGGGGGgggggGGGGGgggggGGGGG"
+			, "hhhhhHHHHHhhhhhHHHHHhhhhhHHHHH"
+			, "iiiiiIIIIIiiiiiIIIIIiiiiiIIIII"
+			, "jjjjjJJJJJjjjjjJJJJJjjjjjJJJJJ"
+			, "kkkkkKKKKKkkkkkKKKKKkkkkkKKKKK"
+			, "lllllLLLLLlllllLLLLLlllllLLLLL"
+			, "mmmmmMMMMMmmmmmMMMMMmmmmmMMMMM"
+			, "nnnnnNNNNNnnnnnNNNNNnnnnnNNNNN"
+			, "iiiiiIIIIIiiiiiIIIIIiiiiiIIIII"
+			, "jjjjjJJJJJjjjjjJJJJJjjjjjJJJJJ"
+			, "kkkkkKKKKKkkkkkKKKKKkkkkkKKKKK"
+			, "lllllLLLLLlllllLLLLLlllllLLLLL"
+			, "mmmmmMMMMMmmmmmMMMMMmmmmmMMMMM"
+			, "nnnnnNNNNNnnnnnNNNNNnnnnnNNNNN"
+			, "iiiiiIIIIIiiiiiIIIIIiiiiiIIIII"
+			, "jjjjjJJJJJjjjjjJJJJJjjjjjJJJJJ"
+			, "kkkkkKKKKKkkkkkKKKKKkkkkkKKKKK"
+			, "lllllLLLLLlllllLLLLLlllllLLLLL"
+			, "mmmmmMMMMMmmmmmMMMMMmmmmmMMMMM"
+			, "nnnnnNNNNNnnnnnNNNNNnnnnnNNNNN"
+		]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Test2"
+		, theme: "city"
+		, bricks: [
+			"                              "
+			, "       eE eEeEeEeEeEeEeE      "
+			, "      eEeEeEe           e     "
+			, "    eEe                 eE    "
+			, "   eE                    e    "
+			, "   e       gG     gG     eE   "
+			, "   e       gG     gG      e   "
+			, "  eE                      e   "
+			, "  e                       e   "
+			, "   e                  i   eE  "
+			, "   e                  i    e  "
+			, "   e                  i    e  "
+			, "   e   iIi          iIi    e  "
+			, "   eE    iIiIiIiIiIi      eE  "
+			, "    eE                    e   "
+			, "     eE                   e   "
+			, "      eE                 eE   "
+			, "        eE              eE    "
+			, "         eEeE        eEeE     "
+			, "             eEeEeEeEe        "
+		, ]
+	},
+
+];
