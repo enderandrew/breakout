@@ -209,7 +209,7 @@ Breakout.Levels = [
 			b: '#FF0000', // Red
 			h: '#DDDDDD' // Light Grey (Button)
 		}
-		, name: "Catch 'em All"
+		, name: "Catch 'em All by EnderAndrew"
 		, theme: "city"
 		, bricks: [
 			"                              "
@@ -230,7 +230,7 @@ Breakout.Levels = [
 			, "             eEeE             "
 		]
 	},
-
+	
 	{
 		colors: {
 			e: '#000000', // black
@@ -392,7 +392,7 @@ Breakout.Levels = [
 		, name: "Creeper by EnderAndrew"
 		, theme: "circuit"
 		, bricks: [
-			"          llllllllll          "
+			  "          llllllllll          "
 			, "          llllllllll          "
 			, "        llggllggllggll        "
 			, "        llggllggllggll        "
@@ -422,7 +422,7 @@ Breakout.Levels = [
 		, name: "Handheld '89"
 		, theme: "circuit"
 		, bricks: [
-			"      gggggggggggggggggg      "
+			  "      gggggggggggggggggg      "
 			, "      g                g      "
 			, "      g dddddddddddddd g      "
 			, "      g d            d g      "
@@ -471,6 +471,38 @@ Breakout.Levels = [
 
 	{
 		colors: {
+			b: '#A1DBE9', // Blue
+			g: '#399F53', // Green
+			l: '#B4E52A', // Light Green
+			w: '#FFFFFF', // White
+			k: '#000000', // Black
+			r: '#F2192A', // Red
+		}
+		, name: "Bulbasaur by EnderAndrew"
+		, theme: "forest"
+		, bricks: [
+			  "                 kKk     "
+			, "                klLlk    "
+			, "              kKklLlk    "
+			, "            kKlklklklkK  "
+			, "        k  klLklLklklLlk "
+			, "       kbkKkgkglLklLklLlk"
+			, "       kbBbBkKgGklLlLklgk"
+			, "       kbBbBbBkgkglLgklgk"
+			, "      kbBbBbBbBkKkgGgkGk "
+			, "     kKbBbBbBbBbBkgGkKkbk"
+			, "     kKbBbBbBbBbkbkKkbBbk"
+			, "     kbBbBbBkKbBbBbBbkbwk"
+			, "     kbBbBbkrwwbwkbkbkkk "
+			, "      kbBbBkrwbBkbBbk    "
+			, "       kKbBbBbBkbBbBk    "
+			, "         kKkKkKkKwbwk    "
+			, "                 kKk     "
+		]
+	},
+
+	{
+		colors: {
 			a: '#000000', // black
 			b: '#5E7985', // blue-grey
 			c: '#424242', // dark-grey
@@ -501,7 +533,6 @@ Breakout.Levels = [
 			, "  bBbBbBbBbBbBbBbBbBbBbBbBb  "
 		, ]
 	},
-
 
 	{
 		colors: {
@@ -601,6 +632,71 @@ Breakout.Levels = [
 			, "           chHgGhHc          "
 			, "            cCcCcC           "
 		, ]
+	},
+	
+	{
+		colors: {
+			g: '#7FE97B', // Green
+			b: '#D8F5FD', // Blue
+			n: '#3C9D30', // Brown
+			k: '#000000', // black
+			w: '#FFFFFF', // white
+			l: '#2FF924', // lightsaber
+		}
+		, name: "Yoda by EnderAndrew"
+		, theme: "space"
+		, bricks: [
+			  "",""
+			, "              kKkK       "
+			, "            kKgGgGkKk    "
+			, "        kKkKbgGgGgGbBkKkK"
+			, "        kgGgGgGgGgGbgGgGk"
+			, "      l  kgGgkgGgkgGgGgk "
+			, "       l  kgGkgGgkgGgkK  "
+			, "        l  kgGwWwgGgk    "
+			, "         l  kgGgGgGk     "
+			, "          l  kwkKkKwk    "
+			, "           lkKwWnwnwWwk  "
+			, "          kgwkwnNnwWkwk  "
+			, "          kKkKwkKkwWkgk  "
+			, "             kwnNnwWkK   "
+			, "             kgGkKgGk    "
+			, "             kKk  kKk    "
+		, ]
+	},
+
+	{
+		colors: {
+			o: '#F47D39', // Orange
+			r: '#D9242B', // Red
+			y: '#F4EC1D', // Yellow
+			w: '#FFFFFF', // White
+			k: '#000000', // Black
+			t: '#F7DBB4', // Tan
+		}
+		, name: "Charizard by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			""
+			, "         kKkK         k   "
+			, "        koOork       krk  "
+			, "       koOoOork      krRk "
+			, "       koOoOook      krRk "
+			, "      koOoOoOork    krRork"
+			, "     koOoOwkoOok    kroyrk"
+			, "     koOoOkKorRrk   kryYrk"
+			, "     koOoOkKorRrk    kykK "
+			, "      kroOoOrRrRrk   krk  "
+			, "       kKrRrRrRrRrk koOk  "
+			, "         kKkrRkrRrkKoOk   "
+			, "          ktTkoOrRrkrok   "
+			, "          ktTtkKrRrkrk    "
+			, "         ktktTtrRrRkK     "
+			, "          kKktTrRrkK      "
+			, "             kKkrkK       "
+			, "              kwrwk       "
+			, "               kKk        "
+		]
 	},
 
 	{
@@ -743,6 +839,42 @@ Breakout.Levels = [
 	},
 
 	{
+		colors: {
+			b: '#129DE2', // Blue
+			l: '#9EDFE1', // Light Blue
+			r: '#82031E', // Red
+			w: '#FFFFFF', // White
+			k: '#000000', // Black
+			t: '#F7DBB4', // Tan
+			n: '#BE7564', // Brown
+			g: '#BEBDC2', // Grey
+		}
+		, name: "Squirtle by EnderAndrew"
+		, theme: "forest"
+		, bricks: [
+			  ""
+			, "        kKkK         kKk  "
+			, "       klLlbkK      klLlk "
+			, "      klLlLlLbkK   kKlLbBk"
+			, "      klLlLlLlkrkK klLbBbk"
+			, "     krlLlLlLlbnNrkblbkBbk"
+			, "     klLlLwklLbtTnrkbBkbk "
+			, "     kblLlkrlbBtTtnkbkKk  "
+			, "      kbBlkrbBbktTnrkK    "
+			, "       kKbBbBkKlLtnrk     "
+			, "       kbkKkKlLlbtnrk     "
+			, "        kKtTklLbktnrk     "
+			, "          ktTkKkKgnrk     "
+			, "         klktTtTtkgk      "
+			, "         kKkKktTlkgk      "
+			, "             kKklbk       "
+			, "              kbBbk       "
+			, "               kKk        "
+
+		]
+	},
+
+	{
 		colors: Breakout.Colors.hf
 		, name: "Galaga by xadamxk"
 		, theme: "space"
@@ -826,6 +958,42 @@ Breakout.Levels = [
 			, "     aAaAaAa   abBbBbBbaAa  "
 			, "     agGgGa     aAbBbaA     "
 			, "      aAaA        aAa       "
+		, ]
+	},
+	
+	{
+		colors: {
+			b: '#003A90', // Blue
+			l: '#A6C5D9', // Light Blue
+			k: '#000000', // Black
+			w: '#FFFFFF', // White
+			y: '#F5FE91', // Yellow
+			o: '#FDB26F', // Orange
+			r: '#E55C66', // Red
+			g: '#217F4B', // Green
+		}
+		, name: "Droid Buddies by EnderAndrew"
+		, theme: "space"
+		, bricks: [
+			  "      kKkK            yY      "
+			, "     klbwlk          yYyY     "
+			, "    kblbBlbk        yoOoOy    "
+			, "   kblLlLlLbk      yoOoOoOy   "
+			, "   klbBblLlLk     yoOoOoOoOy  "
+			, "   klbrbBblLk     yoyYoOyYoY  "
+			, "   kKkKkKkKkK     yoyYoOyYoY  "
+			, "  kKwWwWwWwWkK    yOoOoOoOoy  "
+			, " kwklwbBbBwlkwk    yOokKoOy   "
+			, " kwklwWwWwWlkwk   yYyOoOoyYy  "
+			, " kwklwbBbBwlkwk  yoOoyYyYoOoy "
+			, " kwklwWwWwWlkwk yYyYoOoOoOyYyY"
+			, " kwklwWbBwWlkwk yoOyoOyYoOyoOy"
+			, " kwklwWwWwWlkwk yoOyoOyYoOyoOy"
+			, " kwkwWbwWbwWkwk  yYykbrlgryYy "
+			, " kKkwWblLbwWkKk    yOoyYoOy   "
+			, "kKwkKkKkKkKkKwkK   yoOyYoOy   "
+			, "kwWk  kwWk  kwWk   yoOyYoOy   "
+			, "kKkK kKkKkK kKkK   yYy  yYy   "
 		, ]
 	},
 
@@ -1042,6 +1210,34 @@ Breakout.Levels = [
 	},
 
 	{
+		colors: Breakout.Colors.arkanoid
+		, name: "Atari by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			  "     o  oOoOo  oO   oOoO  o"
+			, "    lLl   l   lLl   l  lL l"
+			, "    g g   g   gGg   g   g g"
+			, "    r r   r   r rR  r   r r"
+			, "   bB bB  b   b bB  b bBb b"
+			, "   pP pP  p  pP  p  p pP  p"
+			, "   yYyYy  y  yYyYy  y yY  y"
+			, "  sS   sS s  s   sS s  sS s"
+			, "  dD   dD d dD    d d   d d"
+			, ""
+			, "              w      "
+			, "             oOo     "
+			, "             lLl     "
+			, "            g g g    "
+			, "            r r r    "
+			, "            b b b    "
+			, "           pP p pP   "
+			, "          yY  y  yY  "
+			, "         sS   S   sS "
+			, "        dD    d    dD"
+		, ]
+	},
+
+	{
 		colors: Breakout.Colors.hf
 		, name: "GameCube by EnderAndrew"
 		, theme: "synthwave"
@@ -1096,28 +1292,72 @@ Breakout.Levels = [
 
 	{
 		colors: {
-			w: '#F2F2F2', // White/Bone
-			g: '#BDC3C7', // Grey/Shadow
-			k: '#000000' // Black holes
+			t: '#F5BB9F', // tan
+			b: '#B1510D', // brown
+			w: '#FEFCFF', // white
+			k: '#000000', // black
 		}
-		, name: "Bad to the Bone"
-		, theme: "synthwave"
+		, name: "Donkey King Jr. by EnderAndrew"
+		, theme: "city"
 		, bricks: [
-			"                              "
-			, "     wwwww          wwwww     "
-			, "   wwwwwwwww      wwwwwwwww   "
-			, "  wwwwwwwwwww    wwwwwwwwwww  "
-			, " wwwwwwwwwwwww  wwwwwwwwwwwww "
-			, " wwkkwwwwwkkww  wwkkwwwwwkkww "
-			, " wwkkwwwwwkkww  wwkkwwwwwkkww "
-			, " wwwwwwwwwwwww  wwwwwwwwwwwww "
-			, "  wwwwwkwwwww    wwwwwkwwwww  "
-			, "  wwwwwkwwwww    wwwwwkwwwww  "
-			, "   wwwwwwwww      wwwwwwwww   "
-			, "   ggwgwgwgg      ggwgwgwgg   "
-			, "   gwgwgwgwg      gwgwgwgwg   "
-			, "                               "
-		]
+			  "            bBbBb          "
+			, "           BbtTtBb         "
+			, "         btbtwWwtbtb       "
+			, "        wbtTwkwkwtTbw      "
+			, "       bwbBtTbBbtTbBwb     "
+			, "      bBwtTbtTbtTbtTwbB    "
+			, "     bBbwtbtTtbtTtbtwbBb   "
+			, "    bBbBwtTbBbBbBbtTwbBbB  "
+			, "    bBbBbwtTtTtTtTtwbBbBb  "
+			, "   bBbBbBbwWbBbBbwWbBbBbBb "
+			, "   bBbB bwWwWwWwWwWwb bBbB "
+			, "   bBb  wWwWwbBbBwWwW  bBb "
+			, "  tbtT   wWwWwWbwWwW   tTbt"
+			, "  tTtTt bBbwWbBwWwbBb tTtTt"
+			, "   tTt   bBbwWwWwbBb   tTt "
+			, "    tT bBbBbB    bBbBb tT  "
+		, ]
+	},
+	
+	{
+		colors: {
+			k: '#202020', // black
+			b: '#2040D0', // blue
+			l: '#5080F0', // light blue
+			c: '#30C0D0', // cyan
+			d: '#1090A0', // dark cyan
+			r: '#A02010', // red
+			p: '#F0B080', // peach
+			t: '#D07040', // tan
+			n: '#804020', // brown
+			i: '#203060', // indigo
+			g: '#404040', // grey
+			w: '#FFFFFF', // white
+		}
+		, name: "Mega Man by EnderAndrew"
+		, theme: "circuit"
+		, bricks: [
+			  "               kKk            "
+			, "             diIidcdi         "
+			, "             blLliIib         "
+			, "            ibBlLidciI        "
+			, "            kKbiIidDiI        "
+			, "      kKkKk kdtpwkikwi        "
+			, "   kiblbBcCdrdppwWiwik        "
+			, "  klLlblidcCkKtpnPpPn  ibBbik "
+			, "  klLbliIidcibitpnNp  ibBliIl "
+			, "   kbik   kdcCiIiIiIdDbBbiIlrR"
+			, "         kKkcCcCckKkKkiIiIir  "
+			, "  kiIi   bBbidDd       kKkK   "
+			, "  ibBbk kbBikKkKk             "
+			, " ibBbBidkikcCckilbkKkKkK      "
+			, "kbBibBbidkKkKkiblLiblLkK      "
+			, "kbBiIbBikK    kilLblLgkK      "
+			, "kbBiIikKk     kKbBlLbrk       "
+			, "kbBkK          kiblbrk        "
+			, " bB             biIbg         "
+			, "                 kKk          "
+		, ]
 	},
 
 	{
@@ -1153,39 +1393,266 @@ Breakout.Levels = [
 	},
 
 	{
-		colors: Breakout.Colors.hf
-		, name: "Frog by Mix3rz"
+		colors: {
+			k: '#000000', // Black
+			y: '#DDD33D', // Yellow
+		}
+		, name: "The Dark Knight by EnderAndrew"
+		, theme: "city"
+		, bricks: [
+			"", "", ""
+			, "  yYyYyYyYy       yYyYyYyYy "
+			, " ykKkKkKkKky y y ykKkKkKkKky"
+			, "  ykKkKkKkKyYkykyYkKkKkKkKy "
+			, "   yKkKkKkKkyKkKykKkKkKkKy  "
+			, "   yKkKkKkKkKkKkKkKkKkKkKy  "
+			, "    yKkKkKKkKkKkKkKkKkKky   "
+			, "    yYyKkKKkKkKkKkKkKkyYy   "
+			, "       yYkKkKkKkKkKkyY      "
+			, "         yYkKkKkKkyY        " 
+			, "           yKkKkKy          "
+			, "            yKkKy           "
+			, "             yKy            "
+			, "              y"
+		]
+	},
+	
+	{
+		colors: {
+			b: '#0B5FB9', // Blue
+			r: '#B11930', // Red
+			y: '#DDD33D', // Yellow
+		}
+		, name: "Kindness is Punk Rock by EnderAndrew"
+		, theme: "synthwave"
+		, bricks: [
+			""
+			, "        bBbBbBbBbBbBb     "
+			, "       bBbBbBbBbBbBbBb    "
+			, "      bBrRrRrRrRrRrRrbB   "
+			, "     bBrRyrRyYyYrRyrRrbB  "
+			, "    bBrRyrRyYyYyYrRryrRbB "
+			, "   bbrRyYrRyYyYyYyYyYyrRbB"
+			, "    bBrRyrRrRrRrRrRyYrRbB "
+			, "     bBrRrRrRrRrRrRrRrbB  "
+			, "      bBrRyYyYyYyrRrRbB   " 
+			, "       bBrRyrRyYyrRrbB    "
+			, "        bBrRrRrRrRrbB     "
+			, "         bBrRyYyrRbB      "
+			, "          bBrRyrRbB       "
+			, "           bBrRrbB        "
+			, "            bBrbB         "
+			, "             bBb          "
+			, "              B           "
+		]
+	},
+
+	{
+		colors: {
+			l: '#7D888A', // light grek
+			d: '#343837', // dark grek
+			n: '#463233', // brown
+			g: '#459A5F', // green
+			y: '#F7F2AE', // yellow
+			s: '#A5AAAD', // slate grey
+			t: '#BD9C8B', // tan
+			r: '#8A2837', // red
+			b: '#10145D', // blue
+			k: '#000000', // black
+
+		}
+		, name: "Vader and Boba Fett by EnderAndrew"
+		, theme: "space"
+		, bricks: [
+			  "      lLlL           nNnN     "
+			, "     lkKkKl         ngGgGn    "
+			, "    lkKkKkKl       ngGgGgGn   "
+			, "    lkKkKkKl      ngGgGgGgGn  "
+			, "   lklLkKlLkl     nrRrRrRrRn  "
+			, "   lklkKkKlkl     nrkKkKkKrn  "
+			, "   lkKklLkKkl     ngrRkKrRgn  "
+			, "  lkKklKklKkKl    ngGrkKrgGn  "
+			, "   lLlkKkKlLl    nyngrkKrgnyn "
+			, "  lkKlLlLlLkKl  nyYsnNnNnNsyYn"
+			, " lkKkKkKkKkKkKl nsSnsgGgGsnSsn"
+			, " lkKkKkdbkKlkKl ngGnsSgGsSngGn"
+			, " lkKkKkdrkKlkKl  nNntTtTtTnNn "
+			, "lklLldDdDdDlLlkl   nsSgGsSn   "
+			, "lkKklkKklkKlkKkl   nyYynyYn   "
+			, "lkKklkKklkKlkKkl   nsSsnsSn   "
+			, "lklLlkKklkKlLlkl   nsSsnsSn   "
+			, " l   lLl lL   l     nNn nN    "
+		]
+	},
+
+	{
+		colors: {
+			g: '#FFD700', // bright gold
+			G: '#B8860B', // dark goldenrod
+		}
+		, name: "Triforce by EnderAndrew"
 		, theme: "forest"
 		, bricks: [
-			"                              "
-			, "                              "
-			, "                              "
-			, "         dDd      dDd         "
-			, "        dfFfd    dfFfd        "
-			, "       dfdDfFdDdDfFdDfd       "
-			, "       dfdDfFaAaAfFdDfd       "
-			, "       dfFfFfaAaAfFfFfd       "
-			, "        dfFfaAaAaAfFfd        "
-			, "       daAaAaAaAaAaAaAd       "
-			, "      daAdaAaAaAaAaAdaAd      "
-			, "      daAadDdDdDdDdDaAad      "
-			, "       daAaAaAaAaAaAaAd       "
-			, "        dDdaAaAaAaAdDd        "
-			, "         daAaAaAaAaAd         "
-			, "       dDaAaAamMaAaAadD       "
-			, "      dmdaAaAmMmMaAaAdmd      "
-			, "      dmMmdmdmMmMdmdmMmd      "
-			, "       dDd d dDdD d dDd       "
-			, "                              "
-			, "                              "
-			, "                              "
+			  "                       "
+			, "              g        "
+			, "             gGg       "
+			, "            gGgGg      "
+			, "           gGgGgGg     "
+			, "          GgGgGgGgG    "
+			, "          G       G    "
+			, "         gGg     gGg   "
+			, "        gGgGg   gGgGg  "
+			, "       gGgGgGg gGgGgGg "
+			, "      GgGgGgGgGgGgGgGgG"
+		]
+	},
+
+	{
+		colors: {
+			r: '#EC1D25', // red
+			b: '#0652A0', // blue
+			y: '#FFF100', // yellow
+			g: '#059244', // green
+			o: '#FA6620', // orange
+			l: '#AEAADD', // lavender
+			p: '#F13BF0', // purple
+			n: '#663B2A', // brown
+			w: '#FFFFFF', // white
+			k: '#000000', // black
+		}
+		, name: "Heroes by EnderAndrew"
+		, theme: "city"
+		, bricks: [
+			  "  rRrRrR   kKkKkKk  k      k"
+			, " krRrRrRk kKgGgGgkK kK    kK"
+			, " kKrRrRkK kgKkgKkgK kKkKkKkK"
+			, " kwkrRkwk gGwkgkwgG kwWkKwWk"
+			, " kwWkKwWk gGgGgGgGg kKkKkKkK"
+			, " rkKrRkKr  gGgGgGg  kKkKkKkK"
+			, "  rRrRrR   gGkKkgG   kyYyYk "
+			, "  rRrRrR    gGgGg    kyoOyk "
+			, "    rR       gGg       kK   "
+			, ""
+			, "    rRrRr   w bBb w l      l"
+            , "   rYyryYr  bBbwbBb lL lL lL"
+			, "  ryYyYyYyr bBwbwbB lLlLlLlL"
+			, "  rywWywWyr bBbBbBb kwWlLwWk"
+			, "  ryYyYyYyr bwWbwWb lkKlLkKl"
+			, "   ryyYyYr  bBbybBb lLlLlLlL"
+			, "   rykKkyr  byYyYyb  wWwWwW "
+			, "    ryYyr    yYnyY    wpPw  "
+			, "     rRr      yYy      wW   "
+		]
+	},
+	
+	{
+		colors: {
+			c: '#58C8AF', // turquoise
+			y: '#F6D814', // yellow
+			o: '#F4BB24', // orange
+			b: '#E9E98F', // blonde
+			g: '#57A13E', // green
+			t: '#95603E', // tan
+			l: '#EECFEF', // lavender
+			p: '#F0CCB2', // peach
+			r: '#A68EDA', // purple
+			n: '#56352E', // brown
+			w: '#FFFFFF', // white
+			k: '#000000', // black
+
+		}
+		, name: "Princesses by EnderAndrew"
+		, theme: "forest"
+		, bricks: [
+              "         yYy         nNn    "
+            , "       yYbyby        YyY    "
+			, "      yYpypypy      nNnNn   "
+			, "      yypPpPpyY    nNpPpnN  "
+			, "     ybpcpPpcpy   nNpPpPpnN "
+			, "     typPpPpPpy   nptpPptpn "
+			, "     ybypPpPpby  nNpPpPpPpn "
+			, "     bybrpPpry   nNnpPpPpn  "
+			, "    ycyplwpwlr   nNnNpPpn   "
+			, "    bybprlwlrp    nNyoOoy   "
+			, "    ybyprRlrRp     npyoyp   "
+			, "    bygrRrlrRr      pyYyp   "
+			, "   yYbyrRrlrRr      yYyYy   "
+            , "  bpy rRrlrlrRr    yYyYyYy  "
+			, "  yb  rRrlrlrRr   oOoOoOoOo "
+			, "   yYrRrlrRrlrRr yYyYyYyYyYy"
+		]
+	},
+	
+	{
+		colors: {
+			r: '#D50019', // red
+			y: '#F8E819', // yellow
+            p: '#F6D814', // peach
+			w: '#FFFFFF', // white
+			k: '#000000', // black
+
+		}
+		, name: "Minnie and Mickey by EnderAndrew"
+		, theme: "synthwave"
+		, bricks: [
+            "",""
+            , "    kKr   rkK    kKk   kKk "
+			, "   kKrRr rRrkK  kKkKk kKkKk"
+			, "   kKrRryrRrkK  kKkKk kKkKk"
+			, "   kKkrpkprkKk   kKkpkpkKk "
+			, "    kKpPpPpkK     kpPpPpk  "
+			, "     kpkpkpk      kpkpkpk  "
+			, "     kpkpkpk      kpkpkpk  "
+			, "     pPpkpPp      pPpkpPp  "
+			, "      pPpPp        pPpPp   "
+			, "      rkKkr        krkrk   "
+			, "    wrRwrwrRw    wkKrkrkKw "
+			, "     wrRwrRw      wrwrwrw  "
+			, "     rwrRrwr       rRrRr   "
+            , "      kK kK        kK kK   "
+			, "     yYy yYy      yYy yYy  "
+		]
+	},
+
+	{
+		colors: {
+			b: '#2E76C8', // blue
+			c: '#7FA2D8', // cyan
+			y: '#E2B734', // yellow
+			g: '#79E252', // green
+			t: '#9C553F', // tan
+			l: '#AEAADD', // lavender
+			p: '#F0BA96', // peach
+			i: '#CD6389', // pink
+			n: '#422D32', // brown
+			w: '#FFFFFF', // white
+			k: '#000000', // black
+			z: '#BEC9E5', // clear
+		}
+		, name: "Got a Friend in You by EnderAndrew"
+		, theme: "city"
+		, bricks: [
+			  ""
+			, "      tTtTtTt     zZzZz   "
+			, "      tTtTtTt    zcCcCcz  "
+			, "    tTtTtTtTtTt zcpPpPpcz "
+			, "      npPpPpn   zcpkpkpcz "
+			, "      npkpkpn   zcpPpPpcz "
+			, "      pPpPpPp   zcpPpPpcz "
+			, "       pPpPp   wgwgGgGgwgw"
+			, "     pykyYykyp wgwgngibwgw"
+			, "     pywkykwyp   wWwWwWw  "
+			, "       nNnNn     gkKkKkg  "
+            , "       bBbBbn    wWwWwWw  "
+			, "       bB bB     wWwWwWw  "
+			, "       nN nN     gGg gGg  "
 		]
 	},
 
 	{
 		colors: Breakout.Colors.hf
 		, name: "Ace of Spades by Mix3rz"
-		, theme: "city"
+		, theme: "circuit"
 		, bricks: [
 			"                              "
 			, "  e                           "
@@ -1243,6 +1710,225 @@ Breakout.Levels = [
 			, "       cdecdcdcdDdedDcC      "
 			, "       cdcCcdgcCcdDcCde      "
 		, ]
+	},
+
+    {
+		colors: {
+			g: "#00B500", // Invader Green
+			w: "#FCFCFC", // Eye White
+		}
+		, name: "Invading Your Space by EnderAndrew"
+		, theme: "space"
+		, bricks: [
+			""
+			, ""
+			, "    g     G   "
+			, "     g   G        g     G   "
+			, "    gGgGgGg        g   G    "
+			, "   gG wWw Gg      gGgGgGg   "
+			, "  gGgGgGgGgGg    gG wWw Gg  "
+			, "  g gGgGgGg G   gGgGgGgGgGg "
+			, "  g g     G G   g gGgGgGg G "
+			, "     gG   Gg    g g     G G "
+			, "                   gG   Gg  "
+            , "           g     G            "
+			, "            g   G             "
+			, "           gGgGgGg            "
+			, "          gG wWw Gg           "
+			, "         gGgGgGgGgGg          "
+			, "         g gGgGgGg G          "
+			, "         g g     G G          "
+			, "            gG   Gg           "
+		]
+	},
+
+	{
+		colors: {
+			r: '#FF0000', // ghost red
+			w: '#FFFFFF', // eye whites
+			k: '#1A1AEE', // blue-black pupils
+			p: '#FFB8FF', // ghost pink
+		}
+		, name: "Blinky and Pinky by EnderAndrew"
+		, theme: "synthwave"
+		, bricks: [
+			"                              "
+			, "      RrRr            PpPp      "
+			, "    RrRrRrRr        PpPpPpPp    "
+			, "   rRrRrRrRrR      pPpPpPpPpP   "
+			, "  RrRwWrRrRwWr    PpPpPpPpPpPp  "
+			, "  RrWwWwRrWwWw    PpWwPpPpWwPp` "
+			, "  RrWwkKRrWwkK    PwWwWpPwWwWP  "
+			, " rRrWwkKRrWwkKR  pPwWwWpPwWwWpP "
+			, " rRrRwWrRrRwWrR  pPwkKWpPwkKWpP "
+			, " rRrRrRrRrRrRrR  pPpkKPpPpkKPpP "
+			, " rRrRrRrRrRrRrR  pPpPpPpPpPpPpP "
+			, " rRrRrRrRrRrRrR  pPpPpPpPpPpPpP "
+			, " rRrRrRrRrRrRrR  pPpPpPpPpPpPpP "
+			, " rR rRr  rRr rR  pPpp pppp pppP "
+			, " r   rR  rR   r   pp   pp   pp  "
+		]
+	},
+ 
+	{
+		colors: {
+			g: '#1A7A1A', // forest green
+			y: '#FFD700', // gold star / ornaments
+			r: '#CC1111', // red ornaments
+			b: '#0055CC', // blue ornaments
+			k: '#5C3317', // brown trunk
+		}
+		, name: "O Christmas Tree by EnderAndrew"
+		, theme: "forest"
+		, bricks: [
+			  "              y               "
+			, "             ggg              "
+			, "            ggggg             "
+			, "           yggggggy           "
+			, "            ggggg             "
+			, "           ggggggg            "
+			, "          rggggggggr          "
+			, "         ggggggggggg          "
+			, "           ggggggg            "
+			, "          ggggggggg           "
+			, "         bgggggggggb          "
+			, "        ggggggggggggg         "
+			, "       rgggggggggggggr        "
+			, "             kkk              "
+			, "             kkk              "
+		]
+	},
+  
+    {
+		colors: {
+			e: "#000000", // Dark Outline
+			r: "#E52521", // Heart Red
+			w: "#FCFCFC", // Glossy Reflection
+		}
+		, name: "Heart Container"
+		, theme: "forest"
+		, bricks: [
+			""
+			, "     eEeEeE      eEeEeE      "
+			, "   eErRrRrReE  eErRrRrReE    "
+			, " eErRwWwWwRrReErRrRrRrRrRrReE"
+			, " eErRwWwWwRrRrRrRrRrRrRrRrReE"
+			, " eErRrRrRrRrRrRrRrRrRrRrRrReE"
+			, "   eErRrRrRrRrRrRrRrRrRrReE  "
+			, "     eErRrRrRrRrRrRrRrReE    "
+			, "       eErRrRrRrRrRrReE      "
+			, "         eErRrRrRrReE        "
+			, "           eErRrReE          "
+			, "            erRre            "
+			, "             ErE             "
+			, "              e              "
+		]
+	},
+
+	{
+		colors: {
+			t: '#C9A96E', // caramel planet body
+			d: '#7A5C1E', // dark equatorial band
+			g: '#DAA520', // gold ring
+		}
+		, name: "Lord of the Rings"
+		, theme: "space"
+		, bricks: [
+			"                              "
+            , "              tT              "
+			, "            tTtTtT            "
+			, "          tTtTtTtTtT          "
+			, "        TtTtTtTtTtTtTt        "
+			, "       tTtTtTtTtTtTtTtT       "
+			, "      dDdDdDdDdDdDdDdDdD      "
+			, "     tTtTtTtTtTtTtTtTtTtT     "
+			, "gGgGgGgGgGgGgGgGgGgGgGgGgGgGgG"
+			, "gGgGgGgGgGgGgGgGgGgGgGgGgGgGgG"
+			, "     tTtTtTtTtTtTtTtTtTtT     "
+			, "      dDdDdDdDdDdDdDdDdD      "
+			, "       tTtTtTtTtTtTtTtT       "
+			, "        TtTtTtTtTtTtTt        "
+			, "          tTtTtTtTtT          "
+			, "            tTtTtT            "
+			, "              tT              "
+		]
+	},
+
+	{
+		colors: {
+			w: '#F2F2F2', // White/Bone
+			g: '#BDC3C7', // Grey/Shadow
+			k: '#000000' // Black holes
+		}
+		, name: "Bad to the Bone"
+		, theme: "synthwave"
+		, bricks: [
+			"                              "
+			, "     wwwww          wwwww     "
+			, "   wwwwwwwww      wwwwwwwww   "
+			, "  wwwwwwwwwww    wwwwwwwwwww  "
+			, " wwwwwwwwwwwww  wwwwwwwwwwwww "
+			, " wwkkwwwwwkkww  wwkkwwwwwkkww "
+			, " wwkkwwwwwkkww  wwkkwwwwwkkww "
+			, " wwwwwwwwwwwww  wwwwwwwwwwwww "
+			, "  wwwwwkwwwww    wwwwwkwwwww  "
+			, "  wwwwwkwwwww    wwwwwkwwwww  "
+			, "   wwwwwwwww      wwwwwwwww   "
+			, "   ggwgwgwgg      ggwgwgwgg   "
+			, "   gwgwgwgwg      gwgwgwgwg   "
+			, "                               "
+		]
+	},
+
+	{
+		colors: Breakout.Colors.hf
+		, name: "Ender's Game by EnderAndrew"
+		, theme: "space"
+		, bricks: [
+			  ""
+			, "aAaAa                         "
+			, "aAaAa aA  aA aAaA  aAaAa aAaA "
+			, "jJ    jJj jJ jJjjJ jJ    jJ J "
+			, "jJjJ  jJjJjJ jJ jJ jJjJ  jJjJj"
+			, "mM    mM mMm mMmMm mM    mM mM"
+			, "mMmMm mM  mM mMmM  mMmMm mM mM"
+			, ""
+			, ""
+			, "    aAaA                       "
+			, "   aAaAa   aAa  aA   aA aAaAa  "
+			, "  jJ      jJjJj jJj jJj jJ     "
+			, "  jJ  jJj jJ jJ jJ j jJ jJjJ   "
+			, "   mMmMm  mMmMm mM   mM mM     "
+			, "    mMm   mM mM mM   mM mMmMm  "
+		]
+	},
+
+	{
+		colors: {
+			a: '#B8D4FF', // ice blue  (top 3 rows)
+			b: '#5588FF', // cornflower (upper body)
+			c: '#1A3FCC', // royal blue (equator)
+			d: '#000D66', // deep navy  (lower tip)
+		}
+		, name: "The Gem"
+		, theme: "city"
+		, bricks: [
+			"                              "
+			, "              a               "
+			, "             aaa              "
+			, "            aaaaa             "
+			, "           bbbbbbb            "
+			, "          bbbbbbbbb           "
+			, "         bbbbbbbbbbb          "
+			, "        ccccccccccccc         "
+			, "         ccccccccccc          "
+			, "          ccccccccc           "
+			, "           ddddddd            "
+			, "            ddddd             "
+			, "             ddd              "
+			, "              d               "
+			, "                              "
+		]
 	},
 
 	{
@@ -1428,187 +2114,6 @@ Breakout.Levels = [
 	},
 
 	{
-		colors: Breakout.Colors.hf
-		, name: "T-Rings"
-		, theme: "city"
-		, bricks: [
-			"n n n n n n n n n n n n n n n"
-			, " k                          k"
-			, "  i                        i "
-			, "   j                      j  "
-			, "    l                    l   "
-			, "     m m m m m m m m m m m  "
-			, "    l                    l   "
-			, "   j                      j  "
-			, "  i                        i "
-			, " k                          k"
-			, "n n n n n n n n n n n n n n n"
-		, ]
-	},
-
-	{
-		colors: Breakout.Colors.arkanoid
-		, name: "The Wall"
-		, theme: "circuit"
-		, bricks: [
-			"r r r r r r r r r r r r r r r r r r r r r r r r r r r r r r "
-			, "o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o "
-			, "l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "r r r r r r r r r r r r r r r r r r r r r r r r r r r r r r "
-			, "o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o "
-			, "l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "r r r r r r r r r r r r r r r r r r r r r r r r r r r r r r "
-			, "o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o "
-			, "l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
-			, "                              "
-		, ]
-	},
-
-	{
-		colors: Breakout.Colors.arkanoid
-		, name: "Checkerboard"
-		, theme: "city"
-		, bricks: [
-			"                              "
-			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
-			, "S r S r S r S r S r S r S r S r S r S r S r S r S r S r S r "
-			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
-			, "S l S l S l S l S l S l S l S l S l S l S l S l S l S l S l "
-			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
-			, "S r S r S r S r S r S r S r S r S r S r S r S r S r S r S r "
-			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
-			, "S l S l S l S l S l S l S l S l S l S l S l S l S l S l S l "
-			, "o S o S o S o S o S o S o S o S o S o S o S o S o S o S o S "
-			, "                              "
-		, ]
-	},
-
-	{
-		colors: Breakout.Colors.arkanoid
-		, name: "Tunnel Vision"
-		, theme: "space"
-		, bricks: [
-			"S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "S r r r r r r r r r r r r r r r r r r r r r r r r r r r r S "
-			, "S r S S S S S S S S S S S S S S S S S S S S S S S S S S r S "
-			, "S r S l l l l l l l l l l l l l l l l l l l l l l l l S r S "
-			, "S r S l S S S S S S S S S S S S S S S S S S S S S S S l S r S "
-			, "S r S l S o o o o o o o o o o o o o o o o o o o o o S l S r S "
-			, "S r S l S o S S S S S S S S S S S S S S S S S S S o S l S r S "
-			, "S r S l S o S y y y y y y y y y y y y y y y y y S o S l S r S "
-			, "S r S l S o S y S             S y S o S l S r S "
-			, "S r S l S o S y S S S S S S S S S S S S S S S y S o S l S r S "
-			, "S r S l S o S y y y y y y y y y y y y y y y y y S o S l S r S "
-			, "S r S l S o S S S S S S S S S S S S S S S S S S S o S l S r S "
-			, "S r S l l l l l l l l l l l l l l l l l l l l l l l l S r S "
-			, "S r S S S S S S S S S S S S S S S S S S S S S S S S S S S r S "
-			, "S r r r r r r r r r r r r r r r r r r r r r r r r r r r r S "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "                              "
-		, ]
-	},
-
-	{
-		colors: Breakout.Colors.arkanoid
-		, name: "The Box"
-		, theme: "forest"
-		, bricks: [
-			"r S o l l l l l l l l l l l l l l l l l l l l l l l o S r "
-			, "r S o l y y y y y y y y y y y y y y y y y y y y y l o S r "
-			, "r S o l y g g g g g g g g g g g g g g g g g g y l o S r "
-			, "r S o l y g b b b b b b b b b b b b b b b b g y l o S r "
-			, "r S o l y g b p p p p p p p p p p p p p p b g y l o S r "
-			, "r S o l y g b p w w w w w w w w w w w w p b g y l o S r "
-			, "r S o l y g b p w S S S S S S S S S S w p b g y l o S r "
-			, "r S o l y g b p w S r r r r r r r r S w p b g y l o S r "
-			, "r S o l y g b p w S r l l l l l l r S w p b g y l o S r "
-			, "r S o l y g b p w S r l o o o l r S w p b g y l o S r "
-			, "r S o l y g b p w S r l l l l l l r S w p b g y l o S r "
-			, "r S o l y g b p w S r r r r r r r r S w p b g y l o S r "
-			, "r S o l y g b p w S S S S S S S S S S w p b g y l o S r "
-			, "r S o l y g b p w w w w w w w w w w w w p b g y l o S r "
-			, "r S o l y g b b b b b b b b b b b b b b b b g y l o S r "
-			, "r S o l y g g g g g g g g g g g g g g g g g g y l o S r "
-			, "r S o l y y y y y y y y y y y y y y y y y y y y y l o S r "
-			, "r S o l l l l l l l l l l l l l l l l l l l l l l l l o S r "
-			, "r S o o o o o o o o o o o o o o o o o o o o o o o o o S r "
-		, ]
-	},
-
-	{
-		colors: Breakout.Colors.hf
-		, name: "Play a Game"
-		, theme: "circuit"
-		, bricks: [
-			"m l m l m l m l m l m l m l m l"
-			, "n k n k n k n k n k n k n k n k"
-			, "m l m l m l m l m l m l m l m l"
-			, "n k n k n k n k n k n k n k n k"
-			, "m l m l m l m l m l m l m l m l"
-			, "n k n k n k n k n k n k n k n k"
-			, "m l m l m l m l m l m l m l m l"
-			, "n k n k n k n k n k n k n k n k"
-			, "m l m l m l m l m l m l m l m l"
-			, "n k n k n k n k n k n k n k n k"
-			, "m l m l m l m l m l m l m l m l"
-			, "n k n k n k n k n k n k n k n k"
-		, ]
-	},
-
-
-	{
-		colors: Breakout.Colors.arkanoid
-		, name: "The Grid"
-		, theme: "synthwave"
-		, bricks: [
-			"S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "S r o l y g b p S r o l y g b p S r o l y g b p S r o l y S "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "S o r l y g b p S o r l y g b p S o r l y g b p S o r l y S "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "S l o r y g b p S l o r y g b p S l o r y g b p S l o r y S "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "S y g b p r o l S y g b p r o l S y g b p r o l S y g b p S "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "S g b p r o l y S g b p r o l y S g b p r o l y S g b p r S "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "S b p r o l y g S b p r o l y g S b p r o l y g S b p r o S "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-			, "S p r o l y g b S p r o l y g b S p r o l y g b S p r o l S "
-			, "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S "
-		, ]
-	},
-
-	{
-		colors: Breakout.Colors.arkanoid
-		, name: "Wavy Walls"
-		, theme: "city"
-		, bricks: [
-			"G G G G G G G G G G G G G G G "
-			, " y y y y y y y y y y y y y y y"
-			, "G G G G G G G G G G G G G G G "
-			, " y y y y y y y y y y y y y y y"
-			, " G G G G G G G G G G G G G G G"
-			, "  y y y y y y y y y y y y y y "
-			, " G G G G G G G G G G G G G G G"
-			, "  y y y y y y y y y y y y y y "
-			, " G G G G G G G G G G G G G G G"
-			, "                              "
-			, "                              "
-			, "                              "
-			, "                              "
-			, "                              "
-			, "                              "
-			, "                              "
-			, "                              "
-			, "                              "
-			, "                              "
-		]
-	},
-
-	{
 		colors: Breakout.Colors.arkanoid
 		, name: "The Checker"
 		, theme: "space"
@@ -1653,62 +2158,30 @@ Breakout.Levels = [
 			, "                              "
 		, ]
 	},
+	
 
 	{
 		colors: Breakout.Colors.hf
-		, name: "Test"
-		, theme: "space"
+		, name: "Game Over by EnderAndrew"
+		, theme: "circuit"
 		, bricks: [
-			"fffffFFFFFfffffFFFFFfffffFFFFf"
-			, "ggGggGGGGGgggggGGGGGgggggGGGGG"
-			, "hhhhhHHHHHhhhhhHHHHHhhhhhHHHHH"
-			, "iiiiiIIIIIiiiiiIIIIIiiiiiIIIII"
-			, "jjjjjJJJJJjjjjjJJJJJjjjjjJJJJJ"
-			, "kkkkkKKKKKkkkkkKKKKKkkkkkKKKKK"
-			, "lllllLLLLLlllllLLLLLlllllLLLLL"
-			, "mmmmmMMMMMmmmmmMMMMMmmmmmMMMMM"
-			, "nnnnnNNNNNnnnnnNNNNNnnnnnNNNNN"
-			, "iiiiiIIIIIiiiiiIIIIIiiiiiIIIII"
-			, "jjjjjJJJJJjjjjjJJJJJjjjjjJJJJJ"
-			, "kkkkkKKKKKkkkkkKKKKKkkkkkKKKKK"
-			, "lllllLLLLLlllllLLLLLlllllLLLLL"
-			, "mmmmmMMMMMmmmmmMMMMMmmmmmMMMMM"
-			, "nnnnnNNNNNnnnnnNNNNNnnnnnNNNNN"
-			, "iiiiiIIIIIiiiiiIIIIIiiiiiIIIII"
-			, "jjjjjJJJJJjjjjjJJJJJjjjjjJJJJJ"
-			, "kkkkkKKKKKkkkkkKKKKKkkkkkKKKKK"
-			, "lllllLLLLLlllllLLLLLlllllLLLLL"
-			, "mmmmmMMMMMmmmmmMMMMMmmmmmMMMMM"
-			, "nnnnnNNNNNnnnnnNNNNNnnnnnNNNNN"
+			  ""
+			, ""
+			, "   lLlLl  blL  lL   b lclLl"
+			, "   di     cCb  biI iI ib   "
+			, "   bB    bd  b bB b b bB   "
+			, "   be    bB  b bB   b bBeb "
+			, "   dD dD idDde ed   i id   "
+			, "   ed  d de  d dd   e de   "
+			, "   eEeEe eE  e eE   e eEeEe"
+			, "   "
+			, "    lbl  lL  l clLlL lbld  "
+			, "   le lL lb  l lL    ld  b "
+			, "   bd  d bd  b db    bB  d "
+			, "   dD  d dD  d dDdD  eb d  "
+			, "   eb  d ed  d ed    bdD   "
+			, "   de  d dD d  de    de d  "
+			, "    eEe   eEe  eEeEe eE  e "
 		]
 	},
-
-	{
-		colors: Breakout.Colors.hf
-		, name: "Test2"
-		, theme: "city"
-		, bricks: [
-			"                              "
-			, "       eE eEeEeEeEeEeEeE      "
-			, "      eEeEeEe           e     "
-			, "    eEe                 eE    "
-			, "   eE                    e    "
-			, "   e       gG     gG     eE   "
-			, "   e       gG     gG      e   "
-			, "  eE                      e   "
-			, "  e                       e   "
-			, "   e                  i   eE  "
-			, "   e                  i    e  "
-			, "   e                  i    e  "
-			, "   e   iIi          iIi    e  "
-			, "   eE    iIiIiIiIiIi      eE  "
-			, "    eE                    e   "
-			, "     eE                   e   "
-			, "      eE                 eE   "
-			, "        eE              eE    "
-			, "         eEeE        eEeE     "
-			, "             eEeEeEeEe        "
-		, ]
-	},
-
 ];

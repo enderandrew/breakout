@@ -26,6 +26,11 @@ The level generator allows anyone to draw pixel art to create custom breakout le
 
 To add your level to the publicly available game, please submit levels via the release thread, Github issue/pull request, or contact me privately.
 
+## Complete Rewrite
+`Rewrote the whole thing in ECMA6+ and fixed tons of bugs along the way
+
+## Story Mode
+`You read that right. The game now features a story that unfolds over 90 levels with multiple endings.
 
 ## Powerups
 `Powers randomly drop upon destroying blocks`
@@ -82,6 +87,26 @@ To add your level to the publicly available game, please submit levels via the r
 	* Destroys bricks in an X shape
 * Power-Smash
 	* Press space to jump / lunge with the paddle when you have this power-up. A well timed lunge will blast multiple bricks in a shotgun blast effect.
+* Tractor Beam
+	* Pulls balls towards center of bricks.
+* Flip Gravity
+	* Ball doesn't fall down as much
+* Transmute
+	* Turns hard/armored bricks soft
+* Curveball
+	* Bend it like Beckham!
+* Sonic Boom
+	* On demand, high-yield detonation wave. Press space to fire it.
+* Ghost ball
+	* Translucent ball that is hard to seems
+* Crosswind
+	* Sudden gusts of wind
+* Decoy Balls
+	* 3 Phantom clone balls
+* Shrinking Paddle
+	* Shrinks with every hit
+* Drunk Ball
+	* Hiccups and stumbles every 1.5 seconds
 
 ## Gameplay
 * Power-ups are now falling objects you have to catch. Risk/reward aspect of gameplay.
@@ -103,6 +128,14 @@ To add your level to the publicly available game, please submit levels via the r
 	* Rotate. Don't get dizzy.
 	* Fight Back. The remaining bricks fight back and shoot lasers at you.
 	* Virus. Infected green bricks and can spawn new virus blocks
+	* Last Stand. Reinforces remaining bricks with armor
+	* Doppleganger. Enemy paddle is actively working against you
+	* Virus. Infected green bricks and can spawn new virus blocks
+	* Overdrive. Speed increases by 5% every 8 seconds
+	* Shockwave. A shockwave ring emerges from the center every 5 seconds
+	* Eclipse. Can you play in the dark?
+	* Mitosis. Broken bricks divine into twin, half-sized blocks.
+* 5 difficulty levels
 * The ball launches from a different spot and angle depending on the position of the paddle
 * Portals. Don't tell Aperture Labs. I don't need Cave Johnson and GladOS coming after me.
 * Black hole. Gravity well affects the ball. The effect is based on the current size of the ball.
@@ -121,22 +154,23 @@ To add your level to the publicly available game, please submit levels via the r
 
 ## Presentation
 * New responsive display resizes the whole game based on display / screen size!
-* Animated parallax backgrounds in 5 themes (synthwave, city, space, forest, circuit) that match the beat of the music
+* Animated parallax backgrounds in 5 times (synthwave, city, space, forest, circuit) that match the beat of the music
 * Fun easter eggs in the themes. Can you find Bigfoot?
 * Achievements! Can you unlock them all? One may require you to cheat.
 * 5 royalty free but awesome songs for the 5 themes
+* Lots more sound effects
 * Added help menu
 * Bezels for bricks and walls
 * Optimzied shaders for bricks, ball and paddle
 * Shiny chrome ball
 * Sexy new paddle with shadow
 * Better looking round pick-ups with glow effects. Good ones glow green and bad ones glow red.
-* Tons more sound effects. A bit memey.
+* New sound effects. A bit memey.
 * Particle effect system
 * New HUD area on the right that shows active effects
 * Ball and paddle change color depending on effects in play.
 * Fast, chaos, lightning, fire and power smash balls have a visual trail.
-* Level Complete and Game Over overlays that display at relevant times. Two meme overlays on special levels.
+* Level Complete and Game Over overlays that display at relevant times.
 * Ripples and thuds - trying to make it feel satisfying to break bricks
 * Floating score numbers
 * Directional debris

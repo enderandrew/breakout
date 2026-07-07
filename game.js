@@ -1,7 +1,6 @@
 //=============================================================================
 //
-// We need some ECMAScript 5 methods but we need to implement them ourselves
-// for older browsers (compatibility: http://kangax.github.com/es5-compat-table/)
+// We don't need ECMAScript 5 methods for old browses in 2026. Slowly rewriting everything to be ES6+
 //
 //  Function.bind:        https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
 //  Object.create:        http://javascript.crockford.com/prototypal.html
@@ -12,733 +11,820 @@
 //
 //=============================================================================
 
-if (!Function.prototype.bind) {
-	Function.prototype.bind = function (obj) {
-		let slice = [].slice
-			, args = slice.call(arguments, 1)
-			, self = this
-			, nop = function () {}
-			, bound = function () {
-				return self.apply(this instanceof nop ? this : (obj || {}), args.concat(slice.call(arguments)));
-			};
-		nop.prototype = self.prototype;
-		bound.prototype = new nop();
-		return bound;
-	};
-}
-
-if (!Object.create) {
-	Object.create = function (base) {
-		function F() {};
-		F.prototype = base;
-		return new F();
-	}
-}
-
 if (!Object.construct) {
-	Object.construct = function (base) {
-		let instance = Object.create(base);
-		if (instance.initialize)
-			instance.initialize.apply(instance, [].slice.call(arguments, 1));
-		return instance;
-	}
+  Object.construct = function(base) {
+    let instance = Object.create(base);
+    if (instance.initialize)
+      instance.initialize.apply(instance, [].slice.call(arguments, 1));
+    return instance;
+  }
 }
 
 if (!Object.extend) {
-	Object.extend = function (destination, source) {
-		for (let property in source) {
-			if (source.hasOwnProperty(property))
-				destination[property] = source[property];
-		}
-		return destination;
-	};
+  Object.extend = function(destination, source) {
+    return Object.assign(destination, source);
+  };
 }
-
-if (!window.requestAnimationFrame) { // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
-	window.requestAnimationFrame = window.webkitRequestAnimationFrame ||
-		window.mozRequestAnimationFrame ||
-		window.oRequestAnimationFrame ||
-		window.msRequestAnimationFrame ||
-		function (callback, element) {
-			window.setTimeout(callback, 1000 / 60);
-		}
-}
-
 
 //=============================================================================
 // Minimal DOM Library ($)
 //=============================================================================
 
-Element = function () {
+const Element = (() => {
+  const instance = {
+    _extended: true,
+    showIf(on) {
+      if (on) this.show();
+      else this.hide();
+    },
+    show() {
+      this.style.display = '';
+    },
+    hide() {
+      this.style.display = 'none';
+    },
+    update(content) {
+      this.innerHTML = content;
+    },
+    hasClassName(name) {
+      return this.classList.contains(name);
+    },
+    addClassName(name) {
+      this.toggleClassName(name, true);
+    },
+    removeClassName(name) {
+      this.toggleClassName(name, false);
+    },
+    toggleClassName(name, on) {
+      this.classList.toggle(name, on ?? !this.classList.contains(name));
+    }
+  };
 
-	let instance = {
+  return (ele) => {
+    if (typeof ele === 'string') ele = document.getElementById(ele);
+    if (ele && !ele._extended) Object.assign(ele, instance);
+    return ele;
+  };
+})();
 
-		_extended: true,
-
-		showIf: function (on) {
-			if (on) this.show();
-			else this.hide();
-		}
-		, show: function () {
-			this.style.display = '';
-		}
-		, hide: function () {
-			this.style.display = 'none';
-		}
-		, update: function (content) {
-			this.innerHTML = content;
-		},
-
-		hasClassName: function (name) {
-			return (new RegExp("(^|\s*)" + name + "(\s*|$)")).test(this.className)
-		}
-		, addClassName: function (name) {
-			this.toggleClassName(name, true);
-		}
-		, removeClassName: function (name) {
-			this.toggleClassName(name, false);
-		}
-		, toggleClassName: function (name, on) {
-			let classes = this.className.split(' ');
-			let n = classes.indexOf(name);
-			on = (typeof on == 'undefined') ? (n < 0) : on;
-			if (on && (n < 0))
-				classes.push(name);
-			else if (!on && (n >= 0))
-				classes.splice(n, 1);
-			this.className = classes.join(' ');
-		}
-	};
-
-	let get = function (ele) {
-		if (typeof ele == 'string')
-			ele = document.getElementById(ele);
-		if (!ele._extended)
-			Object.extend(ele, instance);
-		return ele;
-	};
-
-	return get;
-
-}();
-
-$ = Element;
+const $ = Element;
 
 //=============================================================================
 // State Machine
 //=============================================================================
 
-StateMachine = {
+class StateMachine {
+  constructor(cfg) {
+    const target = cfg.target || this;
+    const events = cfg.events || [];
+    const can = {};
 
-	//---------------------------------------------------------------------------
+    for (const event of events) {
+      const name = event.name;
+      can[name] = (can[name] || []).concat(event.from);
+      target[name] = this.buildEvent(name, event.from, event.to, target, can);
+    }
 
-	create: function (cfg) {
+    target.current = 'none';
+    target.is = (state) => target.current === state;
+    target.can = (eventName) => can[eventName] && can[eventName].includes(target.current);
+    target.cannot = (eventName) => !target.can(eventName);
 
-		let target = cfg.target || {};
-		let events = cfg.events;
+    if (cfg.initial) {
+      const initial = (typeof cfg.initial === 'string') ? {
+        state: cfg.initial
+      } : cfg.initial;
+      const name = initial.event || 'startup';
+      can[name] = ['none'];
 
-		let n, event, name, can = {};
-		for (n = 0; n < events.length; n++) {
-			event = events[n];
-			name = event.name;
-			can[name] = (can[name] || []).concat(event.from);
-			target[name] = this.buildEvent(name, event.from, event.to, target);
-		}
+      const initEvent = this.buildEvent(name, 'none', initial.state, target, can);
+      if (initial.defer) {
+        target[name] = initEvent;
+      } else {
+        initEvent.call(target);
+      }
+    }
+    return target;
+  }
 
-		target.current = 'none';
-		target.is = function (state) {
-			return this.current == state;
-		};
-		target.can = function (event) {
-			return can[event].indexOf(this.current) >= 0;
-		};
-		target.cannot = function (event) {
-			return !this.can(event);
-		};
+  buildEvent(name, from, to, target, can) {
+    return function(...args) {
+      if (this.cannot(name)) {
+        throw new Error(`Event "${name}" inappropriate in current state "${this.current}"`);
+      }
+      const beforeEvent = this[`onbefore${name}`];
+      if (beforeEvent && (false === beforeEvent.apply(this, args))) return;
 
-		if (cfg.initial) { // see "initial" qunit tests for examples
-			let initial = (typeof cfg.initial == 'string') ? {
-				state: cfg.initial
-			} : cfg.initial; // allow single string to represent initial state, or complex object to configure { state: 'first', event: 'init', defer: true|false }
-			name = initial.event || 'startup';
-			can[name] = ['none'];
-			event = this.buildEvent(name, 'none', initial.state, target);
-			if (initial.defer)
-				target[name] = event; // allow caller to trigger initial transition event
-			else
-				event.call(target);
-		}
+      if (this.current !== to) {
+        const exitState = this[`onleave${this.current}`];
+        if (exitState) exitState.apply(this, args);
 
-		return target;
-	},
+        this.current = to;
 
-	//---------------------------------------------------------------------------
+        const enterState = this[`onenter${to}`] || this[`on${to}`];
+        if (enterState) enterState.apply(this, args);
+      }
 
-	buildEvent: function (name, from, to, target) {
-
-		return function () {
-
-			if (this.cannot(name))
-				throw "event " + name + " innapropriate in current state " + this.current;
-
-			let beforeEvent = this['onbefore' + name];
-			if (beforeEvent && (false === beforeEvent.apply(this, arguments)))
-				return;
-
-			if (this.current != to) {
-
-				let exitState = this['onleave' + this.current];
-				if (exitState)
-					exitState.apply(this, arguments);
-
-				this.current = to;
-
-				let enterState = this['onenter' + to] || this['on' + to];
-				if (enterState)
-					enterState.apply(this, arguments);
-			}
-
-			let afterEvent = this['onafter' + name] || this['on' + name];
-			if (afterEvent)
-				afterEvent.apply(this, arguments);
-		}
-
-	}
-
-	//---------------------------------------------------------------------------
-
-};
+      const afterEvent = this[`onafter${name}`] || this[`on${name}`];
+      if (afterEvent) afterEvent.apply(this, args);
+    };
+  }
+}
 
 //=============================================================================
 // GAME
 //=============================================================================
 
-Game = {
+const Game = {
+  // Canvas check is all that remains; modern browsers fully support ES6 baseline
+  compatible() {
+    return !!document.createElement('canvas').getContext;
+  },
 
-	compatible: function () {
-		return Object.create &&
-			Object.extend &&
-			Function.bind &&
-			document.addEventListener && // HTML5 standard, all modern browsers that support canvas should also support add/removeEventListener
-			Game.ua.hasCanvas
-	},
+  start(id, game, cfg) {
+    if (this.compatible()) {
+      return this.current = new Game.Runner(id, game, cfg).game;
+    }
+  },
 
-	start: function (id, game, cfg) {
-		if (Game.compatible())
-			return Game.current = Object.construct(Game.Runner, id, game, cfg).game; // return the game instance, not the runner (caller can always get at the runner via game.runner)
-	},
+  ua: (() => {
+    const ua = navigator.userAgent.toLowerCase();
+    let key = ((ua.indexOf("opera") > -1) ? "opera" : null);
+    key = key || ((ua.indexOf("firefox") > -1) ? "firefox" : null);
+    key = key || ((ua.indexOf("chrome") > -1) ? "chrome" : null);
+    key = key || ((ua.indexOf("safari") > -1) ? "safari" : null);
+    key = key || ((ua.indexOf("msie") > -1) ? "ie" : null);
 
-	ua: function () { // should avoid user agent sniffing... but sometimes you just gotta do what you gotta do
-		let ua = navigator.userAgent.toLowerCase();
-		let key = ((ua.indexOf("opera") > -1) ? "opera" : null);
-		key = key || ((ua.indexOf("firefox") > -1) ? "firefox" : null);
-		key = key || ((ua.indexOf("chrome") > -1) ? "chrome" : null);
-		key = key || ((ua.indexOf("safari") > -1) ? "safari" : null);
-		key = key || ((ua.indexOf("msie") > -1) ? "ie" : null);
+    try {
+      const re = (key === "ie") ? "msie (\\d)" : key + "\\/(\\d\\.\\d)";
+      const matches = ua.match(new RegExp(re, "i"));
+      var version = matches ? parseFloat(matches[1]) : null;
+    } catch (e) {}
 
-		try {
-			let re = (key == "ie") ? "msie (\\d)" : key + "\\/(\\d\\.\\d)"
-			let matches = ua.match(new RegExp(re, "i"));
-			var version = matches ? parseFloat(matches[1]) : null;
-		} catch (e) {}
+    return {
+      full: ua,
+      name: key + (version ? " " + version.toString() : ""),
+      version: version,
+      isFirefox: (key === "firefox"),
+      isChrome: (key === "chrome"),
+      isSafari: (key === "safari"),
+      isOpera: (key === "opera"),
+      isIE: (key === "ie"),
+      hasCanvas: !!document.createElement('canvas').getContext,
+      hasAudio: (typeof Audio !== 'undefined'),
+      hasTouch: ('ontouchstart' in window)
+    };
+  })(),
 
-		return {
-			full: ua
-			, name: key + (version ? " " + version.toString() : "")
-			, version: version
-			, isFirefox: (key == "firefox")
-			, isChrome: (key == "chrome")
-			, isSafari: (key == "safari")
-			, isOpera: (key == "opera")
-			, isIE: (key == "ie")
-			, hasCanvas: (document.createElement('canvas').getContext)
-			, hasAudio: (typeof (Audio) != 'undefined')
-			, hasTouch: ('ontouchstart' in window)
-		}
-	}(),
+  addEvent(obj, type, fn) {
+    $(obj).addEventListener(type, fn, false);
+  },
 
-	addEvent: function (obj, type, fn) {
-		$(obj).addEventListener(type, fn, false);
-	}
-	, removeEvent: function (obj, type, fn) {
-		$(obj).removeEventListener(type, fn, false);
-	},
+  removeEvent(obj, type, fn) {
+    $(obj).removeEventListener(type, fn, false);
+  },
 
-	windowWidth: function () {
-		return window.innerWidth || /* ie */ document.documentElement.offsetWidth;
-	}
-	, windowHeight: function () {
-		return window.innerHeight || /* ie */ document.documentElement.offsetHeight;
-	},
+  windowWidth() {
+    return window.innerWidth || document.documentElement.offsetWidth;
+  },
+  windowHeight() {
+    return window.innerHeight || document.documentElement.offsetHeight;
+  },
 
-	ready: function (fn) {
-		if (Game.compatible())
-			Game.addEvent(document, 'DOMContentLoaded', fn);
-	},
+  ready(fn) {
+    if (this.compatible()) this.addEvent(document, 'DOMContentLoaded', fn);
+  },
 
-	renderToCanvas: function (width, height, render, canvas) { // http://kaioa.com/node/103
-		canvas = canvas || document.createElement('canvas');
-		canvas.width = width;
-		canvas.height = height;
-		render(canvas.getContext('2d'));
-		return canvas;
-	},
+  renderToCanvas(width, height, render, canvas) {
+    const targetCanvas = canvas || document.createElement('canvas');
 
-	loadScript: function (src, cb) {
-		let head = document.getElementsByTagName('head')[0];
-		let s = document.createElement('script');
-		head.appendChild(s);
-		if (Game.ua.isIE) {
-			s.onreadystatechange = function (e) {
-				if (e.currentTarget.readyState == 'loaded')
-					cb(e.currentTarget);
-			}
-		} else {
-			s.onload = function (e) {
-				cb(e.currentTarget);
-			}
-		}
-		s.type = 'text/javascript';
-		s.src = src;
-	},
+    targetCanvas.width = width;
+    targetCanvas.height = height;
+    render(targetCanvas.getContext('2d'));
+    return targetCanvas;
+  },
 
-	loadImages: function (sources, callback) {
-		/* load multiple images and callback when ALL have finished loading */
-		let images = {};
-		let count = sources ? sources.length : 0;
-		if (count == 0) {
-			callback(images);
-		} else {
-			for (let n = 0; n < sources.length; n++) {
-				let source = sources[n];
-				let image = document.createElement('img');
-				images[source] = image;
-				Game.addEvent(image, 'load', function () {
-					if (--count == 0) callback(images);
-				});
-				image.src = source;
-			}
-		}
-	},
+  loadScript(src, cb) {
+    const head = document.getElementsByTagName('head')[0];
+    const s = document.createElement('script');
+    head.appendChild(s);
+    s.onload = (e) => cb(e.currentTarget);
+    s.type = 'text/javascript';
+    s.src = src;
+  },
 
-	loadSounds: function (cfg) {
-		cfg = cfg || {};
-		if (typeof soundManager == 'undefined') {
-			let path = cfg.path || 'sound/soundmanager2-nodebug-jsmin.js';
-			let swf = cfg.swf || 'sound/swf';
-			window.SM2_DEFER = true;
-			Game.loadScript(path, function () {
-				window.soundManager = new SoundManager();
-				soundManager.useHighPerformance = true;
-				soundManager.useFastPolling = true;
-				soundManager.url = swf;
-				soundManager.defaultOptions.volume = 50; // shhh!
-				soundManager.onready(function () {
-					Game.loadSounds(cfg);
-				});
-				soundManager.beginDelayedInit();
-			});
-		} else {
-			let sounds = [];
-			for (let id in cfg.sounds) {
-				sounds.push(soundManager.createSound({
-					id: id
-					, url: cfg.sounds[id]
-				}));
-			}
-			if (cfg.onload)
-				cfg.onload(sounds);
-		}
-	},
+  loadImages(sources, callback) {
+    const images = {};
+    let count = sources ? sources.length : 0;
+    if (count === 0) { callback(images); return; }
+    for (const source of sources) {
+      const image = document.createElement('img');
+      images[source] = image;
+      this.addEvent(image, 'load', () => {
+        if (--count === 0) callback(images);
+      });
+      image.src = source;
+    }
+  },
 
-	random: function (min, max) {
-		return (min + (Math.random() * (max - min)));
-	},
+  loadSounds(cfg = {}) {
+    if (typeof soundManager === 'undefined') {
+      const path = cfg.path || 'sound/soundmanager2-nodebug-jsmin.js';
+      const swf = cfg.swf || 'sound/swf';
+      window.SM2_DEFER = true;
+      this.loadScript(path, () => {
+        window.soundManager = new SoundManager();
+        soundManager.useHighPerformance = true;
+        soundManager.useFastPolling = true;
+        soundManager.url = swf;
+        soundManager.defaultOptions.volume = 50;
+        soundManager.onready(() => this.loadSounds(cfg));
+        soundManager.beginDelayedInit();
+      });
+    } else {
+      const sounds = [];
+      for (const [id, url] of Object.entries(cfg.sounds || {})) {
+        sounds.push(soundManager.createSound({
+          id,
+          url
+        }));
+      }
+      if (cfg.onload) cfg.onload(sounds);
+    }
+  },
 
-	randomInt: function (min, max) {
-		return Math.floor(Math.random() * max) + min;
-	},
+  random(min, max) {
+    return (min + (Math.random() * (max - min)));
+  },
+  randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  },
+  randomChoice(choices) {
+    return choices[Math.floor(Math.random() * choices.length)];
+  },
+  randomBool() {
+    return this.randomChoice([true, false]);
+  },
 
-	randomChoice: function (choices) {
-		return choices[Math.round(Game.random(0, choices.length - 1))];
-	},
+  timestamp() {
+    return performance.now();
+  },
 
-	randomBool: function () {
-		return Game.randomChoice([true, false]);
-	},
+  THREESIXTY: Math.PI * 2,
 
-	timestamp: function () {
-		return new Date().getTime();
-	},
+  KEY: {
+    BACKSPACE: 8,
+    TAB: 9,
+    RETURN: 13,
+    ESC: 27,
+    SPACE: 32,
+    LEFT: 37,
+    UP: 38,
+    RIGHT: 39,
+    DOWN: 40,
+    DELETE: 46,
+    HOME: 36,
+    END: 35,
+    PAGEUP: 33,
+    PAGEDOWN: 34,
+    INSERT: 45,
+    ZERO: 48,
+    ONE: 49,
+    TWO: 50,
+    A: 65,
+    D: 68,
+    W: 87,
+    S: 83,
+    L: 76,
+    P: 80,
+    Q: 81,
+    TILDA: 192
+  },
 
-	THREESIXTY: Math.PI * 2,
+  //=============================================================================
+  // Upgraded GPU Vector Mathematics Engine
+  //=============================================================================
+  Math: {
+    bound(box) {
+      if (box.radius) {
+        box.w = 2 * box.radius;
+        box.h = 2 * box.radius;
+        box.left = box.x - box.radius;
+        box.right = box.x + box.radius;
+        box.top = box.y - box.radius;
+        box.bottom = box.y + box.radius;
+      } else {
+        box.left = box.x;
+        box.right = box.x + box.w;
+        box.top = box.y;
+        box.bottom = box.y + box.h;
+      }
+      return box;
+    },
 
-	KEY: {
-		BACKSPACE: 8
-		, TAB: 9
-		, RETURN: 13
-		, ESC: 27
-		, SPACE: 32
-		, LEFT: 37
-		, UP: 38
-		, RIGHT: 39
-		, DOWN: 40
-		, DELETE: 46
-		, HOME: 36
-		, END: 35
-		, PAGEUP: 33
-		, PAGEDOWN: 34
-		, INSERT: 45
-		, ZERO: 48
-		, ONE: 49
-		, TWO: 50
-		, A: 65
-		, D: 68
-		, L: 76
-		, P: 80
-		, Q: 81
-		, TILDA: 192
-	},
+    overlap(box1, box2, returnOverlap) {
+      if ((box1.right < box2.left) || (box1.left > box2.right) || (box1.top > box2.bottom) || (box1.bottom < box2.top)) {
+        return false;
+      }
+      if (returnOverlap) {
+        const left = Math.max(box1.left, box2.left);
+        const right = Math.min(box1.right, box2.right);
+        const top = Math.max(box1.top, box2.top);
+        const bottom = Math.min(box1.bottom, box2.bottom);
+        return {
+          x: left,
+          y: top,
+          w: right - left,
+          h: bottom - top,
+          left,
+          right,
+          top,
+          bottom
+        };
+      }
+      return true;
+    },
 
-	//-----------------------------------------------------------------------------
+    // Modern Parameter Defaults handle fallbacks cleanly
+    normalize(vec, m = 1) {
+      vec.m = this.magnitude(vec.x, vec.y);
+      if (vec.m === 0) {
+        vec.x = vec.y = vec.m = 0;
+      } else {
+        vec.m = vec.m / m;
+        vec.x /= vec.m;
+        vec.y /= vec.m;
+        vec.m = m;
+      }
+      return vec;
+    },
 
-	Math: {
+    magnitude(x, y) {
+      return Math.hypot(x, y);
+    },
 
-		bound: function (box) {
-			if (box.radius) {
-				box.w = 2 * box.radius;
-				box.h = 2 * box.radius;
-				box.left = box.x - box.radius;
-				box.right = box.x + box.radius;
-				box.top = box.y - box.radius;
-				box.bottom = box.y + box.radius;
-			} else {
-				box.left = box.x;
-				box.right = box.x + box.w;
-				box.top = box.y;
-				box.bottom = box.y + box.h;
-			}
-			return box;
-		},
+    move(x, y, dx, dy, dt) {
+      const nx = dx * dt;
+      const ny = dy * dt;
+      return {
+        x: x + nx,
+        y: y + ny,
+        dx,
+        dy,
+        nx,
+        ny
+      };
+    },
 
-		overlap: function (box1, box2, returnOverlap) {
-			if ((box1.right < box2.left) ||
-				(box1.left > box2.right) ||
-				(box1.top > box2.bottom) ||
-				(box1.bottom < box2.top)) {
-				return false;
-			} else {
-				if (returnOverlap) {
-					let left = Math.max(box1.left, box2.left);
-					let right = Math.min(box1.right, box2.right);
-					let top = Math.max(box1.top, box2.top);
-					let bottom = Math.min(box1.bottom, box2.bottom);
-					return {
-						x: left
-						, y: top
-						, w: right - left
-						, h: bottom - top
-						, left: left
-						, right: right
-						, top: top
-						, bottom: bottom
-					};
-				} else {
-					return true;
-				}
-			}
-		},
+    accelerate(x, y, dx, dy, accel, dt) {
+      const x2 = x + (dt * dx) + (accel * dt * dt * 0.5);
+      const y2 = y + (dt * dy) + (accel * dt * dt * 0.5);
+      const dx2 = dx + (accel * dt) * (dx > 0 ? 1 : -1);
+      const dy2 = dy + (accel * dt) * (dy > 0 ? 1 : -1);
+      return {
+        nx: (x2 - x),
+        ny: (y2 - y),
+        x: x2,
+        y: y2,
+        dx: dx2,
+        dy: dy2
+      };
+    },
 
-		normalize: function (vec, m) {
-			vec.m = this.magnitude(vec.x, vec.y);
-			if (vec.m == 0) {
-				vec.x = vec.y = vec.m = 0;
-			} else {
-				vec.m = vec.m / (m || 1);
-				vec.x = vec.x / vec.m;
-				vec.y = vec.y / vec.m;
-				vec.m = vec.m / vec.m;
-			}
-			return vec;
-		},
+    intercept(x1, y1, x2, y2, x3, y3, x4, y4, d) {
+      const denom = ((y4 - y3) * (x2 - x1)) - ((x4 - x3) * (y2 - y1));
+      if (denom !== 0) {
+        const ua = (((x4 - x3) * (y1 - y3)) - ((y4 - y3) * (x1 - x3))) / denom;
+        if ((ua >= 0) && (ua <= 1)) {
+          const ub = (((x2 - x1) * (y1 - y3)) - ((y2 - y1) * (x1 - x3))) / denom;
+          if ((ub >= 0) && (ub <= 1)) {
+            return {
+              x: x1 + (ua * (x2 - x1)),
+              y: y1 + (ua * (y2 - y1)),
+              d
+            };
+          }
+        }
+      }
+      return null;
+    },
 
-		magnitude: function (x, y) {
-			return Math.sqrt(x * x + y * y);
-		},
+    ballIntercept(ball, rect, nx, ny) {
+      let pt;
+      if (nx < 0) {
+        pt = this.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny, rect.right + ball.radius, rect.top - ball.radius, rect.right + ball.radius, rect.bottom + ball.radius, "right");
+      } else if (nx > 0) {
+        pt = this.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny, rect.left - ball.radius, rect.top - ball.radius, rect.left - ball.radius, rect.bottom + ball.radius, "left");
+      }
+      if (!pt) {
+        if (ny < 0) {
+          pt = this.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny, rect.left - ball.radius, rect.bottom + ball.radius, rect.right + ball.radius, rect.bottom + ball.radius, "bottom");
+        } else if (ny > 0) {
+          pt = this.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny, rect.left - ball.radius, rect.top - ball.radius, rect.right + ball.radius, rect.top - ball.radius, "top");
+        }
+      }
+      return pt;
+    }
+  },
 
-		move: function (x, y, dx, dy, dt) {
-			let nx = dx * dt;
-			let ny = dy * dt;
-			return {
-				x: x + nx
-				, y: y + ny
-				, dx: dx
-				, dy: dy
-				, nx: nx
-				, ny: ny
-			};
-		},
+  //=============================================================================
+  // Game Loop Core Engine
+  //=============================================================================
+  Runner: class {
+    constructor(id, gameClass, cfg) {
+      this.cfg = {
+        ...(gameClass.Defaults || {}),
+        ...(cfg || {})
+      };
+      this.fps = this.cfg.fps || 60;
+      this.interval = 1000.0 / this.fps;
+      this.canvas = $(id);
+      this.resize();
+      this.front = this.canvas;
+      this.front2d = this.front.getContext('2d');
+      this.resetStats();
 
-		accelerate: function (x, y, dx, dy, accel, dt) {
-			let x2 = x + (dt * dx) + (accel * dt * dt * 0.5);
-			let y2 = y + (dt * dy) + (accel * dt * dt * 0.5);
-			let dx2 = dx + (accel * dt) * (dx > 0 ? 1 : -1);
-			let dy2 = dy + (accel * dt) * (dy > 0 ? 1 : -1);
-			return {
-				nx: (x2 - x)
-				, ny: (y2 - y)
-				, x: x2
-				, y: y2
-				, dx: dx2
-				, dy: dy2
-			};
-		},
+      this._loopBound = (time) => this.loop(time);
 
-		intercept: function (x1, y1, x2, y2, x3, y3, x4, y4, d) {
-			let denom = ((y4 - y3) * (x2 - x1)) - ((x4 - x3) * (y2 - y1));
-			if (denom != 0) {
-				let ua = (((x4 - x3) * (y1 - y3)) - ((y4 - y3) * (x1 - x3))) / denom;
-				if ((ua >= 0) && (ua <= 1)) {
-					let ub = (((x2 - x1) * (y1 - y3)) - ((y2 - y1) * (x1 - x3))) / denom;
-					if ((ub >= 0) && (ub <= 1)) {
-						let x = x1 + (ua * (x2 - x1));
-						let y = y1 + (ua * (y2 - y1));
-						return {
-							x: x
-							, y: y
-							, d: d
-						};
-					}
-				}
-			}
-			return null;
-		},
+      // Dynamic structural fallback helper: Safely accepts either old ES5 objects or new ES6 classes
+      if (typeof gameClass === 'function') {
+        this.game = new gameClass(this, this.cfg);
+      } else {
+        // Legacy construction fallback while breakout.js continues its progressive refactor
+        this.game = Object.create(gameClass);
+        if (this.game.initialize) this.game.initialize(this, this.cfg);
+      }
 
-		ballIntercept: function (ball, rect, nx, ny) {
-			let pt;
-			if (nx < 0) {
-				pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny
-					, rect.right + ball.radius
-					, rect.top - ball.radius
-					, rect.right + ball.radius
-					, rect.bottom + ball.radius
-					, "right");
-			} else if (nx > 0) {
-				pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny
-					, rect.left - ball.radius
-					, rect.top - ball.radius
-					, rect.left - ball.radius
-					, rect.bottom + ball.radius
-					, "left");
-			}
-			if (!pt) {
-				if (ny < 0) {
-					pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny
-						, rect.left - ball.radius
-						, rect.bottom + ball.radius
-						, rect.right + ball.radius
-						, rect.bottom + ball.radius
-						, "bottom");
-				} else if (ny > 0) {
-					pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny
-						, rect.left - ball.radius
-						, rect.top - ball.radius
-						, rect.right + ball.radius
-						, rect.top - ball.radius
-						, "top");
-				}
-			}
-			return pt;
-		}
+      if (this.cfg.state) {
+        new StateMachine({
+          target: this.game,
+          ...this.cfg.state
+        });
+      }
 
-	},
+      // Instantiate our modern centralized Input Manager directly to the running instance
+      this.input = new Game.InputManager(this.game, this);
+      this.game.input = this.input; // Overwrites the broken legacy factory reference
 
-	//-----------------------------------------------------------------------------
+      this.initCanvas();
+	  this.addEvents();
+    }
 
-	Runner: {
+    start() {
+      this.running = true;
+      this.lastFrame = Game.timestamp();
+      this._reqFrame = requestAnimationFrame(this._loopBound);
+    }
 
-		initialize: function (id, game, cfg) {
-			this.cfg = Object.extend(game.Defaults || {}, cfg || {});
-			this.fps = this.cfg.fps || 60;
-			this.interval = 1000.0 / this.fps;
-			this.canvas = $(id);
+    stop() {
+      this.running = false;
+      cancelAnimationFrame(this._reqFrame);
+    }
 
-			// FIX: Calculate initial size and DPI scale immediately
-			this.resize();
+    loop(time) {
+      if (!this.running) return;
+      this._reqFrame = requestAnimationFrame(this._loopBound);
+      const frameStart = time ?? Game.timestamp();
 
-			this.front = this.canvas;
-			this.front2d = this.front.getContext('2d');
-			this.addEvents();
-			this.resetStats();
+      let dt = (frameStart - this.lastFrame) / 1000.0;
+      if (dt > 0.25) dt = 0.25;
 
-			this.game = Object.construct(game, this, this.cfg);
+      this.input?.update?.();
+      this.update(dt);
+      const midTimelineAnchor = Game.timestamp(); // Captures the exact boundary dividing update from draw
+      this.draw();
+      const frameEnd = Game.timestamp();
+      this.updateStats(midTimelineAnchor - frameStart, frameEnd - midTimelineAnchor);
+      this.lastFrame = frameStart;
+      this.input?.clearJustPressed?.();
+    }
 
-			if (this.cfg.state)
-				StateMachine.create(Object.extend({
-					target: this.game
-				}, this.cfg.state));
+    initCanvas() {
+      if (this.game?.initCanvas) this.game.initCanvas(this.front2d);
+    }
+    update(dt) {
+      this.game.update(dt);
+    }
+    draw() {
+      this.game.draw(this.front2d);
+      this.drawStats(this.front2d);
+    }
 
-			this.initCanvas();
-		},
+    resetStats() {
+      this.stats = {
+        count: 0,
+        fps: 0,
+        update: 0,
+        draw: 0,
+        frame: 0
+      };
+    }
 
-		start: function () {
-			this.lastFrame = Game.timestamp();
-			this.timer = setInterval(this.loop.bind(this), this.interval);
-		},
+    updateStats(update, draw) {
+      if (this.cfg.stats) {
+        this.stats.update = Math.max(1, update);
+        this.stats.draw = Math.max(1, draw);
+        this.stats.frame = this.stats.update + this.stats.draw;
+        this.stats.count = this.stats.count === this.fps ? 0 : this.stats.count + 1;
+        this.stats.fps = Math.min(this.fps, 1000 / this.stats.frame);
+      }
+    }
 
-		stop: function () {
-			clearInterval(this.timer);
-		},
+    strings = {
+      frame: "frame: ",
+      fps: "fps: ",
+      update: "update: ",
+      draw: "draw: ",
+      ms: "ms"
+    };
 
-		loop: function () {
-			this._start = Game.timestamp();
-			this.update((this._start - this.lastFrame) / 1000.0);
-			this._middle = Game.timestamp();
-			this.draw();
-			this._end = Game.timestamp();
-			this.updateStats(this._middle - this._start, this._end - this._middle);
-			this.lastFrame = this._start;
-		},
+    drawStats(ctx) {
+      if (this.cfg.stats) {
+        ctx.fillText(this.strings.frame + Math.round(this.stats.count), this.width - 100, this.height - 60);
+        ctx.fillText(this.strings.fps + Math.round(this.stats.fps), this.width - 100, this.height - 50);
+        ctx.fillText(this.strings.update + Math.round(this.stats.update) + this.strings.ms, this.width - 100, this.height - 40);
+        ctx.fillText(this.strings.draw + Math.round(this.stats.draw) + this.strings.ms, this.width - 100, this.height - 30);
+      }
+    }
 
-		initCanvas: function () {
-			if (this.game && this.game.initCanvas)
-				this.game.initCanvas(this.front2d);
-		},
+    addEvents() {
+      window.addEventListener('resize', () => this.onresize());
+    }
 
-		update: function (dt) {
-			this.game.update(dt);
-		},
+    onresize() {
+      this.stop();
+      if (this.onresizeTimer) clearTimeout(this.onresizeTimer);
+      this.onresizeTimer = setTimeout(() => {
+        this.resize();
+        this.start();
+      }, 50);
+    }
 
-		draw: function () {
-			this.game.draw(this.front2d);
-			this.drawStats(this.front2d);
-		},
+    resize() {
+      const box = this.canvas.getBoundingClientRect();
+      const w = Math.floor(box.width);
+      const h = Math.floor(box.height);
+      const ratio = window.devicePixelRatio || 1;
+      const physW = Math.floor(w * ratio);
+      const physH = Math.floor(h * ratio);
+    
+      this.bounds = box;              // ← always refresh position
+    
+      if (this.width !== physW || this.height !== physH) {
+        this.width = physW;
+        this.height = physH;
+        this.canvas.width = physW;
+        this.canvas.height = physH;
+        if (this.game?.onresize) this.game.onresize(this.width, this.height);
+        this.initCanvas();
+      }
+    }
 
-		resetStats: function () {
-			this.stats = {
-				count: 0
-				, fps: 0
-				, update: 0
-				, draw: 0
-				, frame: 0
-			};
-		},
+    onkeydown(ev) {
+      if (this.game.onkeydown) return this.game.onkeydown(ev.keyCode);
+      else if (this.cfg.keys) return this.onkey(ev.keyCode, 'down');
+    }
 
-		updateStats: function (update, draw) {
-			if (this.cfg.stats) {
-				this.stats.update = Math.max(1, update);
-				this.stats.draw = Math.max(1, draw);
-				this.stats.frame = this.stats.update + this.stats.draw;
-				this.stats.count = this.stats.count == this.fps ? 0 : this.stats.count + 1;
-				this.stats.fps = Math.min(this.fps, 1000 / this.stats.frame);
-			}
-		},
+    onkeyup(ev) {
+      if (this.game.onkeyup) return this.game.onkeyup(ev.keyCode);
+      else if (this.cfg.keys) return this.onkey(ev.keyCode, 'up');
+    }
 
-		strings: {
-			frame: "frame: "
-			, fps: "fps: "
-			, update: "update: "
-			, draw: "draw: "
-			, ms: "ms"
-		},
+    onkey(keyCode, mode) {
+      const state = this.game.current;
+      for (const k of this.cfg.keys) {
+        const targetMode = k.mode || 'up';
+        if (k.key === keyCode || (k.keys && k.keys.includes(keyCode))) {
+          if (!k.state || k.state === state) {
+            if (targetMode === mode) {
+              k.action.call(this.game);
+            }
+          }
+        }
+      }
+    }
 
-		drawStats: function (ctx) {
-			if (this.cfg.stats) {
-				ctx.fillText(this.strings.frame + Math.round(this.stats.count), this.width - 100, this.height - 60);
-				ctx.fillText(this.strings.fps + Math.round(this.stats.fps), this.width - 100, this.height - 50);
-				ctx.fillText(this.strings.update + Math.round(this.stats.update) + this.strings.ms, this.width - 100, this.height - 40);
-				ctx.fillText(this.strings.draw + Math.round(this.stats.draw) + this.strings.ms, this.width - 100, this.height - 30);
-			}
-		},
+    storage() {
+      try {
+        return window.localStorage || {};
+      } catch (e) {
+        return {};
+      }
+    }
 
-		addEvents: function () {
-			Game.addEvent(document, 'keydown', this.onkeydown.bind(this));
-			Game.addEvent(document, 'keyup', this.onkeyup.bind(this));
-			Game.addEvent(window, 'resize', this.onresize.bind(this));
-		},
+    alert(msg) {
+      this.stop();
+      window.alert(msg); // FIXED: Removed undeclared assignment
+      this.start();
+    }
 
-		onresize: function () {
-			this.stop();
-			if (this.onresizeTimer) clearTimeout(this.onresizeTimer);
-			this.onresizeTimer = setTimeout(this.onresizeend.bind(this), 50);
-		},
+    confirm(msg) {
+      this.stop();
+      const result = window.confirm(msg); // FIXED: Scoped cleanly with const for strict mode
+      this.start();
+      return result;
+    }
+  } // Runner
+}; // Game
 
-		onresizeend: function () {
-			this.resize();
-			this.start();
-		},
+//=============================================================================
+// Synchronized Unified Input Manager Class
+//=============================================================================
+Game.InputManager = class {
+  constructor(game, runner) {
+    this.game = game;
+    this.runner = runner;
 
-		resize: function () {
-			// FIX: Dynamic resizing with High DPI support
-			let box = this.canvas.getBoundingClientRect();
-			let w = Math.floor(box.width);
-			let h = Math.floor(box.height);
+    this.actions = {
+      smash: false,
+      launch: false,
+      escape: false,
+      dashLeft: false,
+      dashRight: false
+    };
+    this.justPressed = {
+      smash: false,
+      launch: false,
+      escape: false,
+      dashLeft: false,
+      dashRight: false
+    };
 
-			// Handle Retina / High DPI screens
-			let ratio = window.devicePixelRatio || 1;
-			let physW = Math.floor(w * ratio);
-			let physH = Math.floor(h * ratio);
+    this.axisX = 0;
+    this.pointerX = null;
 
-			// Only resize if dimensions actually changed
-			if (this.width !== physW || this.height !== physH) {
-				this.width = physW;
-				this.height = physH;
-				this.canvas.width = physW;
-				this.canvas.height = physH;
-				this.bounds = box; // Store logical bounds for mouse mapping
+    this._lastRawMouseX = null;
+    this._lastRawMouseY = null;
 
-				if (this.game && this.game.onresize)
-					this.game.onresize(this.width, this.height);
+    this._keyLeft = false;
+    this._keyRight = false;
+    this._prevGpSmash = false;
+    this._prevGpDashL = false;
+    this._prevGpDashR = false;
 
-				this.initCanvas();
-			}
-		},
+    this.bindEvents();
+  }
 
-		onkeydown: function (ev) {
-			if (this.game.onkeydown) return this.game.onkeydown(ev.keyCode);
-			else if (this.cfg.keys) return this.onkey(ev.keyCode, 'down');
-		},
+  bindEvents() {
+    if (typeof window === 'undefined') return;
 
-		onkeyup: function (ev) {
-			if (this.game.onkeyup) return this.game.onkeyup(ev.keyCode);
-			else if (this.cfg.keys) return this.onkey(ev.keyCode, 'up');
-		},
+    window.addEventListener('keydown', (e) => {
+      // Anti-Scroll: Prevent Spacebar & Arrow keys from hijacking browser viewport
+      if ([32, 37, 38, 39, 40].includes(e.keyCode)) {
+        e.preventDefault();
+      }
+      this.handleKeyboard(e.keyCode, true);
+      this.triggerAudioUnlock();
+    });
+    window.addEventListener('keyup', (e) => this.handleKeyboard(e.keyCode, false));
 
-		onkey: function (keyCode, mode) {
-			let n, k, i, state = this.game.current;
-			for (n = 0; n < this.cfg.keys.length; n++) {
-				k = this.cfg.keys[n];
-				k.mode = k.mode || 'up';
-				if ((k.key == keyCode) || (k.keys && (k.keys.indexOf(keyCode) >= 0))) {
-					if (!k.state || (k.state == state)) {
-						if (k.mode == mode) {
-							k.action.call(this.game);
-						}
-					}
-				}
-			}
-		},
+    window.addEventListener('mousemove', (e) => {
+      if (!this.runner.bounds) return;
 
-		storage: function () {
-			try {
-				return this.localStorage = this.localStorage || window.localStorage || {};
-			} catch (e) {
-				return this.localStorage = {};
-			}
-		},
+      if (this._lastRawMouseX === null || this._lastRawMouseY === null) {
+        this._lastRawMouseX = e.clientX;
+        this._lastRawMouseY = e.clientY;
+        return;
+      }
 
-		alert: function (msg) {
-			this.stop();
-			result = window.alert(msg);
-			this.start();
-			return result;
-		},
+      const deltaX = Math.abs(e.clientX - this._lastRawMouseX);
+      const deltaY = Math.abs(e.clientY - this._lastRawMouseY);
 
-		confirm: function (msg) {
-			this.stop();
-			result = window.confirm(msg);
-			this.start();
-			return result;
-		}
-	} // Runner
-} // Game
+      if (deltaX < 3 && deltaY < 3) {
+        return;
+      }
+
+      this._lastRawMouseX = e.clientX;
+      this._lastRawMouseY = e.clientY;
+
+      const scale = this.runner.width / this.runner.bounds.width;
+      this.pointerX = (e.clientX - this.runner.bounds.left) * scale;
+    });
+
+    window.addEventListener('mousedown', () => {
+      this.justPressed.smash = true;
+      this.actions.smash = true;
+      this.triggerAudioUnlock();
+    });
+    window.addEventListener('mouseup', () => this.actions.smash = false);
+
+    window.addEventListener('touchstart', (e) => {
+      this.triggerAudioUnlock();
+      if (e.targetTouches.length !== 1) return;
+      this.justPressed.smash = true;
+      this.actions.smash = true;
+      this.updateTouchPosition(e.targetTouches[0]);
+    }, {
+      passive: true
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.targetTouches.length !== 1) return;
+      this.updateTouchPosition(e.targetTouches[0]);
+    }, {
+      passive: true
+    });
+
+    window.addEventListener('touchend', () => {
+      this.actions.smash = false;
+      this.pointerX = null;
+    });
+  }
+
+  updateTouchPosition(touch) {
+    if (!this.runner.bounds) return;
+    const scale = this.runner.width / this.runner.bounds.width;
+    this.pointerX = (touch.pageX - this.runner.bounds.left) * scale;
+  }
+
+  handleKeyboard(keyCode, isPressed) {
+        const K = Game.KEY;
+        const currentState = this.game.current;
+        const mode = isPressed ? 'down' : 'up';
+
+        if (isPressed) {
+            this._lastRawMouseX = null;
+            this._lastRawMouseY = null;
+        }
+
+        if (currentState === 'game') {
+            if (keyCode === K.SPACE || keyCode === K.UP || keyCode === K.W) {
+                if (isPressed) this.justPressed.smash = true; 
+                this.actions.smash = isPressed;
+            }
+            if (keyCode === K.LEFT || keyCode === K.A) this._keyLeft = isPressed;
+            if (keyCode === K.RIGHT || keyCode === K.D) this._keyRight = isPressed;
+            if (keyCode === K.ESC) {
+                if (isPressed) this.justPressed.escape = true;
+                this.actions.escape = isPressed;
+            }
+        }
+
+        if (this.runner?.cfg?.keys) {
+            for (const k of this.runner.cfg.keys) {
+                const targetMode = k.mode || 'up';
+                
+                // Route action to execute if it matches the global execution scope
+                if (!k.state || k.state === currentState) {
+                    if (k.key === keyCode || (k.keys && k.keys.includes(keyCode))) {
+                        if (targetMode === mode) {
+                            k.action.call(this.game);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+  isButtonPressed(gp, index) {
+    return !!(gp && gp.buttons[index] && gp.buttons[index].pressed);
+  }
+
+  update() {
+    // FIXED: Cache the native lookup exactly once per frame update
+    const gp = navigator.getGamepads?.()[0] || null;
+
+    // Evaluate edge-triggers using the optimized local state reference pass
+    const gpSmash = this.isButtonPressed(gp, 0);
+    const gpDashL = this.isButtonPressed(gp, 4);
+    const gpDashR = this.isButtonPressed(gp, 5);
+
+    if (gpSmash && !this._prevGpSmash) this.justPressed.smash = true;
+    if (gpDashL && !this._prevGpDashL) this.justPressed.dashLeft = true;
+    if (gpDashR && !this._prevGpDashR) this.justPressed.dashRight = true;
+
+    this._prevGpSmash = gpSmash;
+    this._prevGpDashL = gpDashL;
+    this._prevGpDashR = gpDashR;
+
+    this.axisX = 0;
+    if (this._keyLeft) this.axisX -= 1.0;
+    if (this._keyRight) this.axisX += 1.0;
+
+    // FIXED: Reuse the cached reference instead of invoking getGamepads() a 4th time for the stick axis
+    if (gp) {
+      if (Math.abs(gp.axes[0]) > 0.15) this.axisX = gp.axes[0];
+      if (gp.buttons[14] && gp.buttons[14].pressed) this.axisX = -1.0;
+      if (gp.buttons[15] && gp.buttons[15].pressed) this.axisX = 1.0;
+    }
+  }
+
+  wasActionJustPressed(actionName) {
+    return !!this.justPressed[actionName];
+  }
+
+  clearJustPressed() {
+    for (const key in this.justPressed) {
+      this.justPressed[key] = false;
+    }
+  }
+
+  triggerAudioUnlock() {
+    if (this.game && this.game.userAudioUnlocked === false) {
+      this.game.userAudioUnlocked = true;
+      try {
+        if (this.game.tryStartBGM) this.game.tryStartBGM();
+      } catch (e) {}
+    }
+  }
+};
